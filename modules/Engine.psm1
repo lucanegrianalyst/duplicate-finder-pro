@@ -2,14 +2,16 @@
 .SYNOPSIS
     Motore di scansione, hashing e gestione della cache per Cerca Doppioni PRO.
 .NOTES
-    Versione: 8.8 (Fix del timer infinito)
+    Versione: 9.4 (Filtro file temporanei di Office)
 #>
 
 function Start-DuplicatiAnalysis {
     param(
         [Parameter(Mandatory=$true)][hashtable]$SyncHash,
         [Parameter(Mandatory=$true)][string[]]$Cartelle,
-        [Parameter(Mandatory=$true)][string]$BaseDir
+        [Parameter(Mandatory=$true)][string]$BaseDir,
+        [string[]]$EstensioniSelezionate,
+        [bool]$TuttiIFile = $false
     )
     
     function Log($msg) { $SyncHash.LogQueue.Enqueue($msg) }
@@ -20,6 +22,19 @@ function Start-DuplicatiAnalysis {
             Log "ERRORE: Nessuna cartella valida."; 
             $SyncHash.Result = @{ Esatti = @(); Simili = @() }
             return 
+        }
+
+        $extensions = @()
+        if ($TuttiIFile) {
+            Log "MODALITA UNIVERSALE: Ricerca di TUTTI i tipi di file."
+        } else {
+            if ($null -eq $EstensioniSelezionate -or $EstensioniSelezionate.Count -eq 0) {
+                Log "ERRORE: Nessun tipo di file selezionato per l'analisi."
+                $SyncHash.Result = @{ Esatti = @(); Simili = @() }
+                return
+            }
+            $extensions = $EstensioniSelezionate | ForEach-Object { if ($_ -notmatch '^\*') { "*$_" } else { $_ } }
+            Log "Categorie selezionate: $($extensions -join ', ')"
         }
 
         $cachePath = Join-Path $BaseDir "output\cache_hash.csv"
@@ -38,6 +53,8 @@ function Start-DuplicatiAnalysis {
         Log "Fase 1: Ricerca file..."
         $files = @()
         $count = 0
+        $sysExt = @('.exe','.dll','.sys','.tmp','.log','.ini','.lnk','.bat','.cmd','.msi','.cab','.dat')
+
         foreach ($cartella in $Cartelle) {
             if ($SyncHash.Cancelled) { break }
             
@@ -48,7 +65,20 @@ function Start-DuplicatiAnalysis {
 
             Log "Scansione: $cartella"
             try {
-                $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Include *.mp3,*.flac,*.m4a,*.wav,*.jpg,*.png,*.mp4 -Force -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 0 }
+                if ($TuttiIFile) {
+                    $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { 
+                        $_.Length -gt 0 -and 
+                        $_.Extension -notin $sysExt -and 
+                        $_.FullName -notmatch '\\Windows\\|\\\$Recycle\.Bin\\|\\System Volume Information\\' -and
+                        $_.Name -notlike '~*'
+                    }
+                } else {
+                    $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Include $extensions -Force -ErrorAction SilentlyContinue | Where-Object { 
+                        $_.Length -gt 0 -and 
+                        $_.Name -notlike '~*' 
+                    }
+                }
+
                 foreach ($f in $fileList) {
                     if ($SyncHash.Cancelled) { break }
                     $files += $f
@@ -126,7 +156,6 @@ function Start-DuplicatiAnalysis {
         Log "ERRORE FATALE NEL MOTORE: $_" 
         $SyncHash.Result = $null
     } finally { 
-        # FIX FONDAMENTALE: Segnala sempre alla GUI che il lavoro è terminato
         $SyncHash.HasFinished = $true
         $SyncHash.IsWorking = $false 
         [System.GC]::Collect()
