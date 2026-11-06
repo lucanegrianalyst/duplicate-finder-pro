@@ -149,7 +149,7 @@ function Show-PreviewWindow {
     
     $listView.Add_ItemCheck({
         param($sender, $e)
-        if ($script:isPopulating) { return } # Ignora i clic durante il caricamento
+        if ($script:isPopulating) { return } 
         if ($e.Index -ge 0) {
             $item = $sender.Items[$e.Index]
             if ($item.Tag.IsOriginal) { 
@@ -167,8 +167,30 @@ function Show-PreviewWindow {
     $menuOpenFolder.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Start-Process explorer.exe -ArgumentList "/select,`"$($listView.SelectedItems[0].Tag.Percorso)`"" } })
     $menuCopyPath.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Set-Clipboard -Value $listView.SelectedItems[0].Tag.Percorso } })
 
-    $btnSelAll.Add_Click({ foreach ($lvItem in $listView.Items) { if (-not $lvItem.Tag.IsOriginal) { $lvItem.Checked = $true } }; & $updateSummary })
-    $btnDeselAll.Add_Click({ foreach ($lvItem in $listView.Items) { $lvItem.Checked = $false }; & $updateSummary })
+    # FIX: Blocco del ridisegno e salto dei singoli controlli per performance
+    $btnSelAll.Add_Click({ 
+        $script:isPopulating = $true
+        $listView.BeginUpdate()
+        foreach ($lvItem in $listView.Items) { 
+            if (-not $lvItem.Tag.IsOriginal) { $lvItem.Checked = $true } 
+        }
+        $listView.EndUpdate()
+        $script:isPopulating = $false
+        & $updateSummary 
+    })
+    
+    # FIX: Blocco del ridisegno e salto dei singoli controlli per performance
+    $btnDeselAll.Add_Click({ 
+        $script:isPopulating = $true
+        $listView.BeginUpdate()
+        foreach ($lvItem in $listView.Items) { 
+            $lvItem.Checked = $false 
+        }
+        $listView.EndUpdate()
+        $script:isPopulating = $false
+        & $updateSummary 
+    })
+    
     $chkShowSimilar.Add_CheckedChanged({ & $populateList }); $chkBoldOriginal.Add_CheckedChanged({ & $populateList })
     $txtSearch.Add_TextChanged({ $script:searchText = $txtSearch.Text; & $populateList })
 
