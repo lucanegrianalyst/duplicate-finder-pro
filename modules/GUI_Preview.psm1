@@ -9,32 +9,43 @@ function Show-PreviewWindow {
     $formAnt.Size = New-Object System.Drawing.Size(1350, 750) 
     $formAnt.StartPosition = "CenterParent"
     
+    # FIX: Rende la finestra ridimensionabile e massimizzabile
+    $formAnt.FormBorderStyle = "Sizable"
+    $formAnt.MaximizeBox = $true
+    $formAnt.MinimumSize = New-Object System.Drawing.Size(1000, 600)
+    
     $lblInfo = New-Object System.Windows.Forms.Label
     $lblInfo.Text = "Doppio clic su '▶ Apri' per aprire il file. Doppio clic sul 'Percorso' per aprire la cartella."
     $lblInfo.Location = New-Object System.Drawing.Point(10, 10); $lblInfo.AutoSize = $true; $lblInfo.ForeColor = [System.Drawing.Color]::Blue
+    $lblInfo.Anchor = "Top, Left"
     $formAnt.Controls.Add($lblInfo)
 
     $btnSelAll = New-Object System.Windows.Forms.Button
     $btnSelAll.Text = "Seleziona Tutti"; $btnSelAll.Location = New-Object System.Drawing.Point(10, 30); $btnSelAll.Size = New-Object System.Drawing.Size(120, 30); $btnSelAll.UseVisualStyleBackColor = $true
+    $btnSelAll.Anchor = "Top, Left"
     $formAnt.Controls.Add($btnSelAll)
 
     $btnDeselAll = New-Object System.Windows.Forms.Button
     $btnDeselAll.Text = "Deseleziona Tutti"; $btnDeselAll.Location = New-Object System.Drawing.Point(140, 30); $btnDeselAll.Size = New-Object System.Drawing.Size(120, 30); $btnDeselAll.UseVisualStyleBackColor = $true
+    $btnDeselAll.Anchor = "Top, Left"
     $formAnt.Controls.Add($btnDeselAll)
 
     $chkShowSimilar = New-Object System.Windows.Forms.CheckBox
     $chkShowSimilar.Text = "Mostra file simili (stesso nome, dimensioni diverse)"
     $chkShowSimilar.Location = New-Object System.Drawing.Point(280, 35); $chkShowSimilar.Size = New-Object System.Drawing.Size(350, 20)
     $chkShowSimilar.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold); $chkShowSimilar.Checked = $false; $chkShowSimilar.UseVisualStyleBackColor = $true
+    $chkShowSimilar.Anchor = "Top, Left"
     $formAnt.Controls.Add($chkShowSimilar)
 
     $chkBoldOriginal = New-Object System.Windows.Forms.CheckBox
     $chkBoldOriginal.Text = "Grassetto sugli originali"; $chkBoldOriginal.Location = New-Object System.Drawing.Point(650, 35); $chkBoldOriginal.Size = New-Object System.Drawing.Size(200, 20); $chkBoldOriginal.Checked = $true; $chkBoldOriginal.UseVisualStyleBackColor = $true
+    $chkBoldOriginal.Anchor = "Top, Left"
     $formAnt.Controls.Add($chkBoldOriginal)
 
     $lblSummary = New-Object System.Windows.Forms.Label
     $lblSummary.Text = "Calcolo riepilogo..."; $lblSummary.Location = New-Object System.Drawing.Point(860, 35); $lblSummary.Size = New-Object System.Drawing.Size(460, 20)
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblSummary.ForeColor = [System.Drawing.Color]::DarkSlateGray; $lblSummary.TextAlign = "MiddleRight"
+    $lblSummary.Anchor = "Top, Right" # Ancorato in alto a destra
     $formAnt.Controls.Add($lblSummary)
 
     $lblSearch = New-Object System.Windows.Forms.Label
@@ -43,11 +54,14 @@ function Show-PreviewWindow {
 
     $txtSearch = New-Object System.Windows.Forms.TextBox
     $txtSearch.Location = New-Object System.Drawing.Point(110, 68); $txtSearch.Size = New-Object System.Drawing.Size(250, 20)
+    $txtSearch.Anchor = "Top, Left"
     $formAnt.Controls.Add($txtSearch)
 
     $listView = New-Object System.Windows.Forms.ListView
     $listView.Location = New-Object System.Drawing.Point(10, 100); $listView.Size = New-Object System.Drawing.Size(1310, 470)
     $listView.View = "Details"; $listView.CheckBoxes = $true; $listView.FullRowSelect = $true; $listView.GridLines = $true; $listView.HideSelection = $false
+    # FIX: La ListView si allarga e allunga in tutte le direzioni
+    $listView.Anchor = "Top, Bottom, Left, Right"
     
     $imgList = New-Object System.Windows.Forms.ImageList
     $imgList.ImageSize = New-Object System.Drawing.Size(24,24); $imgList.ColorDepth = [System.Windows.Forms.ColorDepth]::Depth32Bit
@@ -55,13 +69,12 @@ function Show-PreviewWindow {
     
     $listView.SmallImageList = $imgList
     
-    # COLONNE AGGIORNATE (Aggiunta "Tipo")
     $listView.Columns.Add("Seleziona", 70) | Out-Null
     $listView.Columns.Add("Gruppo", 60) | Out-Null
     $listView.Columns.Add("Azione", 170) | Out-Null
     $listView.Columns.Add("Azioni", 80) | Out-Null 
     $listView.Columns.Add("Nome File", 280) | Out-Null 
-    $listView.Columns.Add("Tipo", 70) | Out-Null # NUOVA COLONNA
+    $listView.Columns.Add("Tipo", 70) | Out-Null 
     $listView.Columns.Add("Dimensione", 100) | Out-Null; 
     $listView.Columns.Add("Modifica", 100) | Out-Null
     $listView.Columns.Add("Creazione", 100) | Out-Null
@@ -91,7 +104,6 @@ function Show-PreviewWindow {
         foreach ($item in $itemsToShow) {
             $lvItem = New-Object System.Windows.Forms.ListViewItem("")
             
-            # Estrae l'estensione del file
             $ext = [System.IO.Path]::GetExtension($item.Percorso).ToLower()
             $tipoFile = $ext.TrimStart('.').ToUpper()
             if ([string]::IsNullOrWhiteSpace($tipoFile)) { $tipoFile = "FILE" }
@@ -105,7 +117,7 @@ function Show-PreviewWindow {
             $lvItem.SubItems.Add($item.Azione) | Out-Null
             $lvItem.SubItems.Add("▶ Apri") | Out-Null
             $lvItem.SubItems.Add($item.Nome) | Out-Null
-            $lvItem.SubItems.Add($tipoFile) | Out-Null # INSERIMENTO DEL TIPO
+            $lvItem.SubItems.Add($tipoFile) | Out-Null
             $lvItem.SubItems.Add($item.Dimensione) | Out-Null
             $lvItem.SubItems.Add($item.Modifica) | Out-Null
             $lvItem.SubItems.Add($item.Creazione) | Out-Null
@@ -131,8 +143,6 @@ function Show-PreviewWindow {
         if ($hit.Item -and $hit.SubItem) {
             $colIndex = $hit.Item.SubItems.IndexOf($hit.SubItem)
             $filePath = $hit.Item.Tag.Percorso
-            
-            # Indici aggiornati: Azioni=3, Percorso=9
             if ($colIndex -eq 3) { try { Start-Process $filePath } catch { } }
             elseif ($colIndex -eq 9) { Start-Process explorer.exe -ArgumentList "/select,`"$filePath`"" }
         }
@@ -165,10 +175,12 @@ function Show-PreviewWindow {
     $btnProcedi = New-Object System.Windows.Forms.Button
     $btnProcedi.Text = "PROCEDI CON LE SELEZIONATI"; $btnProcedi.Location = New-Object System.Drawing.Point(10, 580); $btnProcedi.Size = New-Object System.Drawing.Size(500, 40); $btnProcedi.BackColor = [System.Drawing.Color]::LightGreen
     $btnProcedi.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $btnProcedi.UseVisualStyleBackColor = $true
+    $btnProcedi.Anchor = "Bottom, Left" # Ancorato in basso a sinistra
     $formAnt.Controls.Add($btnProcedi)
     
     $btnAnnAnt = New-Object System.Windows.Forms.Button
     $btnAnnAnt.Text = "ANNULLA"; $btnAnnAnt.Location = New-Object System.Drawing.Point(550, 580); $btnAnnAnt.Size = New-Object System.Drawing.Size(770, 40); $btnAnnAnt.BackColor = [System.Drawing.Color]::LightCoral; $btnAnnAnt.UseVisualStyleBackColor = $true
+    $btnAnnAnt.Anchor = "Bottom, Right" # Ancorato in basso a destra
     $formAnt.Controls.Add($btnAnnAnt)
     
     & $populateList
