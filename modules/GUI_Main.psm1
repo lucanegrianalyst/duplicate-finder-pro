@@ -9,7 +9,7 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Duplicate Finder PRO v11.0"
+    $form.Text = "Duplicate Finder PRO v11.6"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
@@ -171,7 +171,9 @@ function Show-MainWindow {
                 $groupIndex++
             }
             
-            $selezionati = Show-PreviewWindow -AnteprimaEsatti $anteprimaEsatti -AnteprimaSimili $anteprimaSimili
+            # FIX DEFINITIVO: Cattura il risultato e filtra l'output sporco
+            $risultatoGrezzo = Show-PreviewWindow -AnteprimaEsatti $anteprimaEsatti -AnteprimaSimili $anteprimaSimili
+            $selezionati = @($risultatoGrezzo | Where-Object { $null -ne $_ -and $_.PSObject.Properties.Name -contains 'Percorso' })
             
             if ($selezionati.Count -gt 0) {
                 $procedi = $true
