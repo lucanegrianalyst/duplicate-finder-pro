@@ -2,11 +2,10 @@
 Add-Type -AssemblyName System.Drawing
 
 function Show-MainWindow {
-    param([string]$BaseDir)
+    param([string]$BaseDir, [string]$ModulePath)
 
-    Import-Module "$BaseDir\Modules\Engine.psm1" -Force -DisableNameChecking
-    Import-Module "$BaseDir\Modules\GUI_Preview.psm1" -Force -DisableNameChecking
-    Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
+
+
 
     $form = New-Object System.Windows.Forms.Form
     $form.Text = "Duplicate Finder PRO v11.26"
@@ -300,7 +299,7 @@ function Show-MainWindow {
         
         $PowerShell = [powershell]::Create()
         $PowerShell.Runspace = [runspacefactory]::CreateRunspace(); $PowerShell.Runspace.Open()
-        $EnginePath = Join-Path $BaseDir "Modules\Engine.psm1"
+        $EnginePath = Join-Path $ModulePath "Engine.psm1"
         
         $PowerShell.Runspace.SessionStateProxy.SetVariable("SyncHash", $SyncHash)
         $PowerShell.Runspace.SessionStateProxy.SetVariable("Cartelle", $cartelle)
