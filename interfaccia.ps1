@@ -1,8 +1,9 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# --- FINESTRA PRINCIPALE ---
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "Trova e Gestisci Duplicati v1.0"
+$form.Text = "Trova e Gestisci Duplicati v2.0"
 $form.Size = New-Object System.Drawing.Size(650, 550)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
@@ -32,10 +33,10 @@ $chkElimina.AutoSize = $true
 $form.Controls.Add($chkElimina)
 
 $btnAvvia = New-Object System.Windows.Forms.Button
-$btnAvvia.Text = "AVVIA ANALISI E PULIZIA"
+$btnAvvia.Text = "1. ANALIZZA CARTELLA (Trova Duplicati)"
 $btnAvvia.Location = New-Object System.Drawing.Point(20, 110)
 $btnAvvia.Size = New-Object System.Drawing.Size(590, 40)
-$btnAvvia.BackColor = [System.Drawing.Color]::LightGreen
+$btnAvvia.BackColor = [System.Drawing.Color]::LightBlue
 $btnAvvia.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 $form.Controls.Add($btnAvvia)
 
@@ -69,49 +70,127 @@ $btnSfoglia.Add_Click({
 $btnAvvia.Add_Click({
     $cartella = $txtPercorso.Text
     if (-not (Test-Path $cartella)) { [System.Windows.Forms.MessageBox]::Show("Cartella non valida!"); return }
-    $elimina = $chkElimina.Checked
+    
     $btnAvvia.Enabled = $false
     $txtLog.Clear()
-    
     $txtLog.AppendText("Analisi in corso in: $cartella...`r`n")
     $form.Refresh()
     
     $files = Get-ChildItem -LiteralPath $cartella -Recurse -File -Include *.mp3,*.flac,*.m4a,*.wav,*.jpg,*.png,*.mp4 -ErrorAction SilentlyContinue
-    $txtLog.AppendText("Trovati $($files.Count) file. Ricerca dei candidati...`r`n")
-    $form.Refresh()
-    
     $gruppiDimensione = $files | Group-Object Length | Where-Object Count -gt 1
     $duplicati = @()
     $cont = 0
     
     foreach ($g in $gruppiDimensione) {
         $cont++
-        $txtLog.AppendText("Calcolo hash per gruppo dimensione $cont di $($gruppiDimensione.Count)...`r`n")
+        $txtLog.AppendText("Calcolo hash per gruppo $cont di $($gruppiDimensione.Count)...`r`n")
         [System.Windows.Forms.Application]::DoEvents()
-        
         $hashMap = @{}
         foreach ($f in $g.Group) {
             $h = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash
             if (-not $hashMap.ContainsKey($h)) { $hashMap[$h] = @() }
             $hashMap[$h] += $f
         }
-        foreach ($k in $hashMap.Keys) {
-            if ($hashMap[$k].Count -gt 1) { $duplicati += , $hashMap[$k] }
+        foreach ($k in $hashMap.Keys) { if ($hashMap[$k].Count -gt 1) { $duplicati += , $hashMap[$k] } }
+    }
+    
+    $txtLog.AppendText("Trovati $($duplicati.Count) gruppi di file identici.`r`nPreparazione anteprima...`r`n")
+    $form.Refresh()
+    
+    if ($duplicati.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show("Nessun duplicato trovato!")
+        $btnAvvia.Enabled = $true
+        return
+    }
+    
+    # --- PREPARA I DATI PER L'ANTEPRIMA ---
+    $anteprima = @()
+    foreach ($gruppo in $duplicati) {
+        $daTenere = Scegli-Migliore -Files $gruppo
+        foreach ($file in $gruppo) {
+            $azione = if ($file.FullName -eq $daTenere.FullName) { "TENERE (Originale)" } else { "ELIMINARE (Copia)" }
+            $anteprima += [PSCustomObject]@{
+                Azione = $azione
+                Nome = $file.Name
+                Dimensione = "{0:N2} MB" -f ($file.Length / 1MB)
+                Percorso = $file.FullName
+                OggettoOriginale = $file
+                DaTenere = $daTenere
+            }
         }
     }
     
-    $txtLog.AppendText("Trovati $($duplicati.Count) gruppi di file identici (SHA-256).`r`n" + ("=" * 50) + "`r`n")
-    $form.Refresh()
+    # --- CREA FINESTRA DI ANTEPRIMA ---
+    $formAnteprima = New-Object System.Windows.Forms.Form
+    $formAnteprima.Text = "Anteprima: Cosa vuoi fare?"
+    $formAnteprima.Size = New-Object System.Drawing.Size(800, 500)
+    $formAnteprima.StartPosition = "CenterParent"
     
+    $listView = New-Object System.Windows.Forms.ListView
+    $listView.Location = New-Object System.Drawing.Point(10, 10)
+    $listView.Size = New-Object System.Drawing.Size(760, 390)
+    $listView.View = "Details"
+    $listView.FullRowSelect = $true
+    $listView.GridLines = $true
+    $listView.Columns.Add("Azione", 150) | Out-Null
+    $listView.Columns.Add("Nome File", 250) | Out-Null
+    $listView.Columns.Add("Dimensione", 100) | Out-Null
+    $listView.Columns.Add("Percorso", 400) | Out-Null
+    
+    foreach ($item in $anteprima) {
+        $lvItem = New-Object System.Windows.Forms.ListViewItem($item.Azione)
+        $lvItem.SubItems.Add($item.Nome) | Out-Null
+        $lvItem.SubItems.Add($item.Dimensione) | Out-Null
+        $lvItem.SubItems.Add($item.Percorso) | Out-Null
+        if ($item.Azione -like "TENERE*") { $lvItem.ForeColor = [System.Drawing.Color]::Green }
+        else { $lvItem.ForeColor = [System.Drawing.Color]::Red }
+        $lvItem.Tag = $item
+        $listView.Items.Add($lvItem) | Out-Null
+    }
+    $formAnteprima.Controls.Add($listView)
+    
+    $btnProcedi = New-Object System.Windows.Forms.Button
+    $btnProcedi.Text = "PROCEDI CON LA PULIZIA"
+    $btnProcedi.Location = New-Object System.Drawing.Point(10, 410)
+    $btnProcedi.Size = New-Object System.Drawing.Size(300, 40)
+    $btnProcedi.BackColor = [System.Drawing.Color]::LightGreen
+    $btnProcedi.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $formAnteprima.Controls.Add($btnProcedi)
+    
+    $btnAnnulla = New-Object System.Windows.Forms.Button
+    $btnAnnulla.Text = "ANNULLA"
+    $btnAnnulla.Location = New-Object System.Drawing.Point(470, 410)
+    $btnAnnulla.Size = New-Object System.Drawing.Size(300, 40)
+    $btnAnnulla.BackColor = [System.Drawing.Color]::LightCoral
+    $btnAnnulla.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $formAnteprima.Controls.Add($btnAnnulla)
+    
+    $script:procedi = $false
+    
+    $btnAnnulla.Add_Click({ $formAnteprima.Close() })
+    $btnProcedi.Add_Click({ $script:procedi = $true; $formAnteprima.Close() })
+    
+    $formAnteprima.ShowDialog() | Out-Null
+    $formAnteprima.Dispose()
+    
+    # --- SE L'UTENTE HA CLICCATO ANNULLA, FERMATI ---
+    if (-not $script:procedi) {
+        $txtLog.AppendText("Operazione annullata dall'utente.`r`n")
+        $btnAvvia.Enabled = $true
+        return
+    }
+    
+    # --- ESEGUI LA PULIZIA ---
+    $elimina = $chkElimina.Checked
     $fileGestiti = 0
     $spazioLiberato = 0
     $cestinoBase = "C:\cerca doppioni\output\cestino\$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     
-    foreach ($gruppo in $duplicati) {
-        $daTenere = Scegli-Migliore -Files $gruppo
-        $daScartare = $gruppo | Where-Object { $_.FullName -ne $daTenere.FullName }
-        
-        foreach ($scarto in $daScartare) {
+    $txtLog.AppendText("Avvio pulizia...`r`n" + ("=" * 50) + "`r`n")
+    
+    foreach ($item in $anteprima) {
+        if ($item.Azione -like "ELIMINARE*") {
+            $scarto = $item.OggettoOriginale
             $spazioLiberato += $scarto.Length
             if ($elimina) {
                 Remove-Item -LiteralPath $scarto.FullName -Force -ErrorAction SilentlyContinue
