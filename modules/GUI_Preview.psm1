@@ -77,7 +77,8 @@ function Show-PreviewWindow {
     $listView.Columns.Add("Created", 100) | Out-Null
     $listView.Columns.Add("Path", 350) | Out-Null
     
-    $script:lastClickX = 0; $script:lastClickY = 0; $script:searchText = ""
+    $script:searchText = ""
+    $script:isPopulating = $false
 
     $updateSummary = {
         $selezionati = @($listView.Items | Where-Object { $_.Checked })
@@ -92,6 +93,7 @@ function Show-PreviewWindow {
     }
 
     $populateList = {
+        $script:isPopulating = $true
         $listView.BeginUpdate(); $listView.Items.Clear()
         $itemsToShow = @(); $itemsToShow += $AnteprimaEsatti
         if ($chkShowSimilar.Checked) { $itemsToShow += $AnteprimaSimili }
@@ -129,11 +131,11 @@ function Show-PreviewWindow {
             if (-not $item.IsOriginal -and $item.Tipo -eq "Exact") { $lvItem.Checked = $true }
             $lvItem.Tag = $item; $listView.Items.Add($lvItem) | Out-Null
         }
-        $listView.EndUpdate(); & $updateSummary
+        $listView.EndUpdate()
+        $script:isPopulating = $false
+        & $updateSummary
     }
 
-    $listView.Add_MouseDown({ param($sender, $e); $script:lastClickX = $e.X; $script:lastClickY = $e.Y })
-    
     $listView.Add_MouseDoubleClick({
         param($sender, $e)
         $hit = $listView.HitTest($e.X, $e.Y)
@@ -147,10 +149,13 @@ function Show-PreviewWindow {
     
     $listView.Add_ItemCheck({
         param($sender, $e)
+        if ($script:isPopulating) { return } # Ignora i clic durante il caricamento
         if ($e.Index -ge 0) {
             $item = $sender.Items[$e.Index]
-            if ($item.Tag.IsOriginal) { $e.NewValue = [System.Windows.Forms.CheckState]::Unchecked; return }
-            if ($script:lastClickX -gt 70) { $e.NewValue = $e.CurrentValue; return }
+            if ($item.Tag.IsOriginal) { 
+                $e.NewValue = [System.Windows.Forms.CheckState]::Unchecked 
+                return 
+            }
             $formAnt.BeginInvoke([Action]{ & $updateSummary })
         }
     })
