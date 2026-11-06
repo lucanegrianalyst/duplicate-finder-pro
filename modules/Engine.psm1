@@ -2,7 +2,7 @@
 .SYNOPSIS
     Motore di scansione, hashing e gestione della cache per Cerca Doppioni PRO.
 .NOTES
-    Versione: 9.4 (Filtro file temporanei di Office)
+    Versione: 10.2 (Filtro file cloud/offline e file troppo piccoli)
 #>
 
 function Start-DuplicatiAnalysis {
@@ -67,15 +67,17 @@ function Start-DuplicatiAnalysis {
             try {
                 if ($TuttiIFile) {
                     $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { 
-                        $_.Length -gt 0 -and 
+                        $_.Length -gt 10240 -and # Ignora file < 10KB (segnaposto)
                         $_.Extension -notin $sysExt -and 
                         $_.FullName -notmatch '\\Windows\\|\\\$Recycle\.Bin\\|\\System Volume Information\\' -and
-                        $_.Name -notlike '~*'
+                        $_.Name -notlike '~*' -and
+                        -not ($_.Attributes -band [System.IO.FileAttributes]::Offline) # Ignora file OneDrive/Cloud non scaricati
                     }
                 } else {
                     $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Include $extensions -Force -ErrorAction SilentlyContinue | Where-Object { 
-                        $_.Length -gt 0 -and 
-                        $_.Name -notlike '~*' 
+                        $_.Length -gt 10240 -and # Ignora file < 10KB (segnaposto)
+                        $_.Name -notlike '~*' -and
+                        -not ($_.Attributes -band [System.IO.FileAttributes]::Offline) # Ignora file OneDrive/Cloud non scaricati
                     }
                 }
 
