@@ -9,11 +9,17 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Duplicate Finder PRO v11.22"
+    $form.Text = "Duplicate Finder PRO v11.26"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
+
+    # Imposta l'icona della finestra
+    $iconPath = Join-Path $BaseDir "icona.ico"
+    if (Test-Path $iconPath) {
+        $form.Icon = New-Object System.Drawing.Icon($iconPath)
+    }
 
     $lblTitle = New-Object System.Windows.Forms.Label
     $lblTitle.Text = "1. Folders to analyze:"; $lblTitle.Location = New-Object System.Drawing.Point(20, 15)
