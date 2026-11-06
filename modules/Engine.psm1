@@ -2,7 +2,7 @@
 .SYNOPSIS
     Scanning, hashing, and cache engine for Duplicate Finder PRO.
 .NOTES
-    Version: 11.0 (English Translation)
+    Version: 11.7 (Fixed Date Priority)
 #>
 
 function Start-DuplicatiAnalysis {
@@ -189,9 +189,14 @@ function Get-BestFile {
 
         if ($name -match ' ') { $score -= 20 }
 
+        # FIX: Arrotonda le date al minuto per evitare che i millisecondi privilegino la copia (1)
         [PSCustomObject]@{ 
-            File = $_; Score = $score; Size = $_.Length; 
-            LastWrite = $_.LastWriteTime; Creation = $_.CreationTime; PathLength = $_.FullName.Length 
+            File = $_; 
+            Score = $score; 
+            Size = $_.Length; 
+            LastWrite = $_.LastWriteTime.ToString("yyyyMMddHHmm"); 
+            Creation = $_.CreationTime.ToString("yyyyMMddHHmm");
+            PathLength = $_.FullName.Length 
         }
     }
     

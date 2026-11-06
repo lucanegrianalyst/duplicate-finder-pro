@@ -9,7 +9,7 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Duplicate Finder PRO v11.6"
+    $form.Text = "Duplicate Finder PRO v11.8"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
@@ -89,6 +89,15 @@ function Show-MainWindow {
     $lblResultSummary.Text = ""; $lblResultSummary.Location = New-Object System.Drawing.Point(20, 690); $lblResultSummary.Size = New-Object System.Drawing.Size(640, 50)
     $lblResultSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblResultSummary.ForeColor = [System.Drawing.Color]::DarkGreen; $lblResultSummary.TextAlign = "MiddleCenter"
     $form.Controls.Add($lblResultSummary)
+
+    # FIX: Aggiunta la conferma di uscita
+    $form.Add_FormClosing({
+        param($sender, $e)
+        $res = [System.Windows.Forms.MessageBox]::Show("Are you sure you want to exit?", "Confirm Exit", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+        if ($res -ne [System.Windows.Forms.DialogResult]::Yes) {
+            $e.Cancel = $true
+        }
+    })
 
     $SyncHash = [hashtable]::Synchronized(@{})
     $SyncHash.LogQueue = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
@@ -171,7 +180,6 @@ function Show-MainWindow {
                 $groupIndex++
             }
             
-            # FIX DEFINITIVO: Cattura il risultato e filtra l'output sporco
             $risultatoGrezzo = Show-PreviewWindow -AnteprimaEsatti $anteprimaEsatti -AnteprimaSimili $anteprimaSimili
             $selezionati = @($risultatoGrezzo | Where-Object { $null -ne $_ -and $_.PSObject.Properties.Name -contains 'Percorso' })
             
