@@ -21,3 +21,6 @@ desktop.ini
 
 # Modulo Pester (installato localmente)
 Modules/Pester/
+
+# Test files
+Test_Duplicates/
