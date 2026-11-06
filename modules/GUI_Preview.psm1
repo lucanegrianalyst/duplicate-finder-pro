@@ -60,17 +60,11 @@ function Show-PreviewWindow {
     $listView.View = "Details"; $listView.CheckBoxes = $true; $listView.FullRowSelect = $true; $listView.GridLines = $true; $listView.HideSelection = $false
     $listView.Anchor = "Top, Bottom, Left, Right"
     
-    $imgList = New-Object System.Windows.Forms.ImageList
-    $imgList.ImageSize = New-Object System.Drawing.Size(24,24); $imgList.ColorDepth = [System.Windows.Forms.ColorDepth]::Depth32Bit
-    $iconCache = @{}
-    
-    $listView.SmallImageList = $imgList
-    
     $listView.Columns.Add("Select", 70) | Out-Null
     $listView.Columns.Add("Group", 60) | Out-Null
     $listView.Columns.Add("Action", 170) | Out-Null
     $listView.Columns.Add("Actions", 80) | Out-Null 
-    $listView.Columns.Add("File Name", 280) | Out-Null 
+    $listView.Columns.Add("File Name", 300) | Out-Null 
     $listView.Columns.Add("Type", 70) | Out-Null 
     $listView.Columns.Add("Size", 100) | Out-Null; 
     $listView.Columns.Add("Modified", 100) | Out-Null
@@ -92,25 +86,26 @@ function Show-PreviewWindow {
         $lblSummary.Text = "Selected: $($selezionati.Count) files (Exact: $totEsatti, Similar: $totSimili)  |  Space to free: $testoSpazio"
     }
 
+    # FIX DEFINITIVO: Caricamento a blocchi con DoEvents per non bloccare la UI
     $populateList = {
         $script:isPopulating = $true
-        $listView.BeginUpdate(); $listView.Items.Clear()
-        $itemsToShow = @(); $itemsToShow += $AnteprimaEsatti
+        $listView.BeginUpdate()
+        $listView.Items.Clear()
+
+        $itemsToShow = @()
+        $itemsToShow += $AnteprimaEsatti
         if ($chkShowSimilar.Checked) { $itemsToShow += $AnteprimaSimili }
-        if ($script:searchText -ne "") { $itemsToShow = $itemsToShow | Where-Object { $_.Nome -like "*$($script:searchText)*" -or $_.Percorso -like "*$($script:searchText)*" } }
+        if ($script:searchText -ne "") {
+            $itemsToShow = $itemsToShow | Where-Object { $_.Nome -like "*$($script:searchText)*" -or $_.Percorso -like "*$($script:searchText)*" }
+        }
         $itemsToShow = $itemsToShow | Sort-Object -Property @{Expression="Gruppo";Descending=$false}, @{Expression="IsOriginal";Descending=$true}
 
+        $count = 0
         foreach ($item in $itemsToShow) {
             $lvItem = New-Object System.Windows.Forms.ListViewItem("")
             
-            $ext = [System.IO.Path]::GetExtension($item.Percorso).ToLower()
-            $tipoFile = $ext.TrimStart('.').ToUpper()
+            $tipoFile = [System.IO.Path]::GetExtension($item.Percorso).TrimStart('.').ToUpper()
             if ([string]::IsNullOrWhiteSpace($tipoFile)) { $tipoFile = "FILE" }
-            
-            if (-not $iconCache.ContainsKey($ext)) {
-                try { $ico = [System.Drawing.Icon]::ExtractAssociatedIcon($item.Percorso); $imgList.Images.Add($ico); $iconCache[$ext] = $imgList.Images.Count - 1 } catch { $iconCache[$ext] = -1 }
-            }
-            $lvItem.ImageIndex = $iconCache[$ext]
             
             $lvItem.SubItems.Add($item.Gruppo.ToString()) | Out-Null
             $lvItem.SubItems.Add($item.Azione) | Out-Null
@@ -129,8 +124,18 @@ function Show-PreviewWindow {
             else { $lvItem.ForeColor = [System.Drawing.Color]::Red }
             
             if (-not $item.IsOriginal -and $item.Tipo -eq "Exact") { $lvItem.Checked = $true }
-            $lvItem.Tag = $item; $listView.Items.Add($lvItem) | Out-Null
+            $lvItem.Tag = $item
+            $listView.Items.Add($lvItem) | Out-Null
+            
+            $count++
+            # Ogni 200 file, sospendi il ridisegno, mostra i progressi e riprendi
+            if ($count % 200 -eq 0) {
+                $listView.EndUpdate()
+                [System.Windows.Forms.Application]::DoEvents()
+                $listView.BeginUpdate()
+            }
         }
+        
         $listView.EndUpdate()
         $script:isPopulating = $false
         & $updateSummary
@@ -149,7 +154,7 @@ function Show-PreviewWindow {
     
     $listView.Add_ItemCheck({
         param($sender, $e)
-        if ($script:isPopulating) { return } 
+        if ($script:isPopulating) { return }
         if ($e.Index -ge 0) {
             $item = $sender.Items[$e.Index]
             if ($item.Tag.IsOriginal) { 
@@ -167,25 +172,19 @@ function Show-PreviewWindow {
     $menuOpenFolder.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Start-Process explorer.exe -ArgumentList "/select,`"$($listView.SelectedItems[0].Tag.Percorso)`"" } })
     $menuCopyPath.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Set-Clipboard -Value $listView.SelectedItems[0].Tag.Percorso } })
 
-    # FIX: Blocco del ridisegno e salto dei singoli controlli per performance
     $btnSelAll.Add_Click({ 
         $script:isPopulating = $true
         $listView.BeginUpdate()
-        foreach ($lvItem in $listView.Items) { 
-            if (-not $lvItem.Tag.IsOriginal) { $lvItem.Checked = $true } 
-        }
+        foreach ($lvItem in $listView.Items) { if (-not $lvItem.Tag.IsOriginal) { $lvItem.Checked = $true } }
         $listView.EndUpdate()
         $script:isPopulating = $false
         & $updateSummary 
     })
     
-    # FIX: Blocco del ridisegno e salto dei singoli controlli per performance
     $btnDeselAll.Add_Click({ 
         $script:isPopulating = $true
         $listView.BeginUpdate()
-        foreach ($lvItem in $listView.Items) { 
-            $lvItem.Checked = $false 
-        }
+        foreach ($lvItem in $listView.Items) { $lvItem.Checked = $false }
         $listView.EndUpdate()
         $script:isPopulating = $false
         & $updateSummary 
@@ -207,7 +206,11 @@ function Show-PreviewWindow {
     $btnAnnAnt.Anchor = "Bottom, Right"
     $formAnt.Controls.Add($btnAnnAnt)
     
-    & $populateList
+    # FIX: Mostra la finestra vuota e popola DOPO che è visibile (tramite Shown)
+    $formAnt.Add_Shown({
+        $formAnt.Activate()
+        & $populateList
+    })
 
     $script:selezionati = @()
     $btnAnnAnt.Add_Click({ $formAnt.Close() })

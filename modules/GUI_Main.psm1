@@ -9,7 +9,7 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Duplicate Finder PRO v11.9"
+    $form.Text = "Duplicate Finder PRO v11.22"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
@@ -20,20 +20,36 @@ function Show-MainWindow {
     $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblTitle.AutoSize = $true
     $form.Controls.Add($lblTitle)
 
-    $listBox = New-Object System.Windows.Forms.ListBox
-    $listBox.Location = New-Object System.Drawing.Point(20, 40); $listBox.Size = New-Object System.Drawing.Size(530, 70)
-    $form.Controls.Add($listBox)
+    $dgvFolders = New-Object System.Windows.Forms.DataGridView
+    $dgvFolders.Location = New-Object System.Drawing.Point(20, 40); $dgvFolders.Size = New-Object System.Drawing.Size(530, 90)
+    $dgvFolders.AllowUserToAddRows = $false; $dgvFolders.AllowUserToDeleteRows = $false
+    $dgvFolders.ReadOnly = $true; $dgvFolders.SelectionMode = "FullRowSelect"
+    $dgvFolders.RowHeadersVisible = $false; $dgvFolders.BackgroundColor = [System.Drawing.Color]::White
+    $dgvFolders.AllowUserToResizeRows = $false; $dgvFolders.ColumnHeadersVisible = $true
+
+    $colPath = New-Object System.Windows.Forms.DataGridViewTextBoxColumn
+    $colPath.Name = "Path"; $colPath.HeaderText = "Folder Path"; $colPath.AutoSizeMode = "Fill"
+    $dgvFolders.Columns.Add($colPath) | Out-Null
+
+    $colRemove = New-Object System.Windows.Forms.DataGridViewButtonColumn
+    $colRemove.Name = "Remove"; $colRemove.HeaderText = "Action"; $colRemove.Text = "❌ Remove"
+    $colRemove.UseColumnTextForButtonValue = $true; $colRemove.Width = 100; $colRemove.FlatStyle = "Flat"
+    $colRemove.DefaultCellStyle.ForeColor = [System.Drawing.Color]::DarkRed
+    $colRemove.DefaultCellStyle.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+    $dgvFolders.Columns.Add($colRemove) | Out-Null
+
+    $dgvFolders.Add_CellContentClick({
+        param($sender, $e)
+        if ($e.RowIndex -ge 0 -and $e.ColumnIndex -eq 1) { $sender.Rows.RemoveAt($e.RowIndex) }
+    })
+    $form.Controls.Add($dgvFolders)
 
     $btnAggiungi = New-Object System.Windows.Forms.Button
-    $btnAggiungi.Text = "+ Add"; $btnAggiungi.Location = New-Object System.Drawing.Point(560, 40); $btnAggiungi.Size = New-Object System.Drawing.Size(100, 30); $btnAggiungi.UseVisualStyleBackColor = $true
+    $btnAggiungi.Text = "+ Add"; $btnAggiungi.Location = New-Object System.Drawing.Point(560, 40); $btnAggiungi.Size = New-Object System.Drawing.Size(100, 90); $btnAggiungi.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAggiungi)
 
-    $btnRimuovi = New-Object System.Windows.Forms.Button
-    $btnRimuovi.Text = "- Remove"; $btnRimuovi.Location = New-Object System.Drawing.Point(560, 75); $btnRimuovi.Size = New-Object System.Drawing.Size(100, 30); $btnRimuovi.UseVisualStyleBackColor = $true
-    $form.Controls.Add($btnRimuovi)
-
     $grpFiles = New-Object System.Windows.Forms.GroupBox
-    $grpFiles.Text = "2. File types to analyze"; $grpFiles.Location = New-Object System.Drawing.Point(20, 120)
+    $grpFiles.Text = "2. File types to analyze"; $grpFiles.Location = New-Object System.Drawing.Point(20, 140)
     $grpFiles.Size = New-Object System.Drawing.Size(640, 90); $grpFiles.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $form.Controls.Add($grpFiles)
 
@@ -54,39 +70,41 @@ function Show-MainWindow {
     $grpFiles.Controls.Add($chkDoc)
 
     $lblAction = New-Object System.Windows.Forms.Label
-    $lblAction.Text = "3. Actions"; $lblAction.Location = New-Object System.Drawing.Point(20, 220)
+    $lblAction.Text = "3. Actions"; $lblAction.Location = New-Object System.Drawing.Point(20, 240)
     $lblAction.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblAction.AutoSize = $true
     $form.Controls.Add($lblAction)
 
     $chkElimina = New-Object System.Windows.Forms.CheckBox
-    $chkElimina.Text = "Delete permanently (otherwise move to trash)"; $chkElimina.Location = New-Object System.Drawing.Point(20, 245); $chkElimina.AutoSize = $true; $chkElimina.UseVisualStyleBackColor = $true
+    $chkElimina.Text = "Delete permanently (otherwise move to trash)"; $chkElimina.Location = New-Object System.Drawing.Point(20, 265); $chkElimina.AutoSize = $true; $chkElimina.UseVisualStyleBackColor = $true
     $form.Controls.Add($chkElimina)
 
     $btnAvvia = New-Object System.Windows.Forms.Button
-    $btnAvvia.Text = "START ANALYSIS"; $btnAvvia.Location = New-Object System.Drawing.Point(20, 275)
+    $btnAvvia.Text = "START ANALYSIS"; $btnAvvia.Location = New-Object System.Drawing.Point(20, 295)
     $btnAvvia.Size = New-Object System.Drawing.Size(640, 45); $btnAvvia.BackColor = [System.Drawing.Color]::LightGreen
     $btnAvvia.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold); $btnAvvia.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAvvia)
 
     $btnAnnulla = New-Object System.Windows.Forms.Button
-    $btnAnnulla.Text = "CANCEL"; $btnAnnulla.Location = New-Object System.Drawing.Point(20, 330); $btnAnnulla.Size = New-Object System.Drawing.Size(100, 30); $btnAnnulla.Enabled = $false; $btnAnnulla.UseVisualStyleBackColor = $true
+    $btnAnnulla.Text = "ABORT"; $btnAnnulla.Location = New-Object System.Drawing.Point(20, 350); $btnAnnulla.Size = New-Object System.Drawing.Size(100, 30)
+    $btnAnnulla.Enabled = $false; $btnAnnulla.BackColor = [System.Drawing.Color]::LightCoral
+    $btnAnnulla.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $form.Controls.Add($btnAnnulla)
 
-    # NUOVO PULSANTE PER RIAPRIRE L'ANTEPRIMA
     $btnReopenPreview = New-Object System.Windows.Forms.Button
-    $btnReopenPreview.Text = "SHOW LAST RESULTS"; $btnReopenPreview.Location = New-Object System.Drawing.Point(130, 330); $btnReopenPreview.Size = New-Object System.Drawing.Size(150, 30); $btnReopenPreview.Enabled = $false; $btnReopenPreview.UseVisualStyleBackColor = $true
+    $btnReopenPreview.Text = "SHOW LAST RESULTS"; $btnReopenPreview.Location = New-Object System.Drawing.Point(130, 350); $btnReopenPreview.Size = New-Object System.Drawing.Size(150, 30); $btnReopenPreview.Enabled = $false; $btnReopenPreview.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnReopenPreview)
 
     $lblCounter = New-Object System.Windows.Forms.Label
-    $lblCounter.Text = "Waiting..."; $lblCounter.Location = New-Object System.Drawing.Point(290, 338); $lblCounter.Size = New-Object System.Drawing.Size(160, 20)
+    $lblCounter.Text = "Waiting..."; $lblCounter.Location = New-Object System.Drawing.Point(290, 358); $lblCounter.Size = New-Object System.Drawing.Size(370, 20)
+    $lblCounter.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
     $form.Controls.Add($lblCounter)
 
     $pb = New-Object System.Windows.Forms.ProgressBar
-    $pb.Location = New-Object System.Drawing.Point(450, 335); $pb.Size = New-Object System.Drawing.Size(210, 20)
+    $pb.Location = New-Object System.Drawing.Point(450, 355); $pb.Size = New-Object System.Drawing.Size(210, 20)
     $form.Controls.Add($pb)
 
     $txtLog = New-Object System.Windows.Forms.TextBox
-    $txtLog.Location = New-Object System.Drawing.Point(20, 370); $txtLog.Size = New-Object System.Drawing.Size(640, 310)
+    $txtLog.Location = New-Object System.Drawing.Point(20, 390); $txtLog.Size = New-Object System.Drawing.Size(640, 290)
     $txtLog.Multiline = $true; $txtLog.ScrollBars = "Vertical"; $txtLog.ReadOnly = $true; $txtLog.Font = New-Object System.Drawing.Font("Consolas", 9)
     $form.Controls.Add($txtLog)
 
@@ -101,11 +119,12 @@ function Show-MainWindow {
         if ($res -ne [System.Windows.Forms.DialogResult]::Yes) { $e.Cancel = $true }
     })
 
-    # VARIABILI PER SALVARE I RISULTATI IN MEMORIA
     $script:lastAnteprimaEsatti = $null
     $script:lastAnteprimaSimili = $null
+    $script:startTime = $null
+    $script:hashStartTime = $null
+    $script:estimatedTotalSeconds = $null
 
-    # FUNZIONE CONDIVISA PER MOSTRARE L'ANTEPRIMA E PROCESSARE I FILE
     function Show-PreviewAndProcess {
         param($AnteprimaEsatti, $AnteprimaSimili)
         $risultatoGrezzo = Show-PreviewWindow -AnteprimaEsatti $AnteprimaEsatti -AnteprimaSimili $AnteprimaSimili
@@ -134,7 +153,6 @@ function Show-MainWindow {
         }
     }
 
-    # EVENTO CLIC PER IL PULSANTE "SHOW LAST RESULTS"
     $btnReopenPreview.Add_Click({
         if ($null -ne $script:lastAnteprimaEsatti -or $null -ne $script:lastAnteprimaSimili) {
             Show-PreviewAndProcess -AnteprimaEsatti $script:lastAnteprimaEsatti -AnteprimaSimili $script:lastAnteprimaSimili
@@ -147,10 +165,18 @@ function Show-MainWindow {
 
     $btnAggiungi.Add_Click({
         $fb = New-Object System.Windows.Forms.FolderBrowserDialog
-        if ($fb.ShowDialog() -eq "OK" -and -not $listBox.Items.Contains($fb.SelectedPath)) { $listBox.Items.Add($fb.SelectedPath) | Out-Null }
+        if ($fb.ShowDialog() -eq "OK") {
+            $exists = $false
+            foreach ($row in $dgvFolders.Rows) { if ($row.Cells[0].Value -eq $fb.SelectedPath) { $exists = $true; break } }
+            if (-not $exists) { $dgvFolders.Rows.Add($fb.SelectedPath, "❌ Remove") }
+        }
     })
-    $btnRimuovi.Add_Click({ if ($listBox.SelectedIndex -ge 0) { $listBox.Items.RemoveAt($listBox.SelectedIndex) } })
-    $btnAnnulla.Add_Click({ $SyncHash.Cancelled = $true; $txtLog.AppendText("`r`nCancelling...`r`n") })
+
+    $btnAnnulla.Add_Click({ 
+        $SyncHash.Cancelled = $true
+        $txtLog.AppendText("`r`nAbort requested. Waiting for current file to finish...`r`n")
+        $btnAnnulla.Enabled = $false
+    })
 
     $timer = New-Object System.Windows.Forms.Timer
     $timer.Interval = 200
@@ -162,79 +188,87 @@ function Show-MainWindow {
             $txtLog.SelectionStart = $txtLog.Text.Length; $txtLog.ScrollToCaret()
         }
         
-        if ($SyncHash.ScannedCount -gt 0 -and $SyncHash.Total -eq 0) { $lblCounter.Text = "Scanning: $($SyncHash.ScannedCount) files..." }
-        if ($SyncHash.Total -gt 0) {
-            if ($pb.Style -ne "Blocks") { $pb.Style = "Blocks" }
-            $pb.Maximum = $SyncHash.Total; $pb.Value = [math]::Min($SyncHash.Progress, $SyncHash.Total)
-            $lblCounter.Text = "Hash: $($SyncHash.Progress) of $($SyncHash.Total)"
+        # LOGICA DEL COUNTDOWN
+        if ($script:startTime -ne $null -and $SyncHash.IsWorking) {
+            $elapsed = (Get-Date) - $script:startTime
+            $elapsedStr = "{0:mm\:ss}" -f $elapsed
+
+            if ($SyncHash.ScannedCount -gt 0 -and $SyncHash.Total -eq 0) {
+                $lblCounter.Text = "Scanning files... (Elapsed: $elapsedStr)"
+            }
+            
+            if ($SyncHash.Total -gt 0) {
+                if ($pb.Style -ne "Blocks") { $pb.Style = "Blocks" }
+                $pb.Maximum = $SyncHash.Total; $pb.Value = [math]::Min($SyncHash.Progress, $SyncHash.Total)
+                
+                if ($null -eq $script:hashStartTime) { $script:hashStartTime = Get-Date }
+                $hashElapsed = (Get-Date) - $script:hashStartTime
+                
+                if ($SyncHash.Progress -gt 50) {
+                    # Calcoliamo la stima TOTALE una sola volta dopo i primi 50 file
+                    if ($null -eq $script:estimatedTotalSeconds -and $hashElapsed.TotalSeconds -gt 0) {
+                        $speed = $SyncHash.Progress / $hashElapsed.TotalSeconds
+                        $remainingFiles = $SyncHash.Total - $SyncHash.Progress
+                        $script:estimatedTotalSeconds = $hashElapsed.TotalSeconds + ($remainingFiles / $speed)
+                    }
+                    
+                    if ($null -ne $script:estimatedTotalSeconds) {
+                        $currentEta = $script:estimatedTotalSeconds - $hashElapsed.TotalSeconds
+                        if ($currentEta -gt 0) {
+                            $etaStr = "{0:mm\:ss}" -f [TimeSpan]::FromSeconds($currentEta)
+                            $lblCounter.Text = "Hash: $($SyncHash.Progress)/$($SyncHash.Total) | Remaining: $etaStr"
+                        } else {
+                            $lblCounter.Text = "Hash: $($SyncHash.Progress)/$($SyncHash.Total) | Finishing..."
+                        }
+                    } else {
+                        $lblCounter.Text = "Hash: $($SyncHash.Progress)/$($SyncHash.Total) | Calculating..."
+                    }
+                } else {
+                    $lblCounter.Text = "Hash: $($SyncHash.Progress)/$($SyncHash.Total) | Initializing..."
+                }
+            }
         }
 
         if ($SyncHash.HasFinished -eq $true) {
             $timer.Stop(); $SyncHash.HasFinished = $false 
             
-            $btnAvvia.Enabled = $true; $btnAnnulla.Enabled = $false; $btnAggiungi.Enabled = $true; $btnRimuovi.Enabled = $true
+            $btnAvvia.Enabled = $true; $btnAnnulla.Enabled = $false; $btnAggiungi.Enabled = $true
             $chkAudio.Enabled = $true; $chkVideo.Enabled = $true; $chkFoto.Enabled = $true; $chkDoc.Enabled = $true
-            $lblCounter.Text = "Completed!"; $pb.Style = "Blocks"; $pb.Value = 0; $lblResultSummary.Text = "" 
+            $lblCounter.Text = "Completed! (Total: $([math]::Round(((Get-Date) - $script:startTime).TotalSeconds, 1)) sec)"
+            $pb.Style = "Blocks"; $pb.Value = 0; $lblResultSummary.Text = "" 
             
-            if ($SyncHash.Cancelled) { $txtLog.AppendText("`r`nOperation cancelled by user.`r`n"); return }
+            if ($SyncHash.Cancelled) { $txtLog.AppendText("`r`nOperation aborted by user.`r`n"); return }
+            
             if ($null -eq $SyncHash.Result) {
-                [System.Windows.Forms.MessageBox]::Show("Analysis interrupted by a critical error.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                $txtLog.AppendText("`r`nOperation finished with an error (Result is null).`r`n")
+                [System.Windows.Forms.MessageBox]::Show("Analysis interrupted by a critical error. Please check the log.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                 return
             }
 
-            $esatti = $SyncHash.Result.Esatti; $simili = $SyncHash.Result.Simili; $SyncHash.Result = $null
-            if ($esatti.Count -eq 0 -and $simili.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("No duplicates found!"); return }
-            
-            $anteprimaEsatti = @(); $anteprimaSimili = @(); $groupIndex = 1
-            
-            foreach ($gruppo in $esatti) {
-                $daTenere = Get-BestFile -Files $gruppo
-                foreach ($file in $gruppo) {
-                    $isOriginal = ($file.FullName -eq $daTenere.FullName)
-                    $dataMod = $file.LastWriteTime.ToString("MM/dd/yy HH:mm"); $dataCre = $file.CreationTime.ToString("MM/dd/yy HH:mm")
-                    $anteprimaEsatti += [PSCustomObject]@{
-                        Gruppo = $groupIndex
-                        Azione = if ($isOriginal) { "KEEP (Original)" } else { "DELETE (Copy)" }
-                        Nome = $file.Name; Dimensione = Format-Size -Bytes $file.Length
-                        Modifica = if ($isOriginal) { "$dataMod *" } else { $dataMod }; Creazione = if ($isOriginal) { "$dataCre *" } else { $dataCre }
-                        Percorso = $file.FullName; OggettoOriginale = $file; Tipo = "Exact"; IsOriginal = $isOriginal
-                    }
-                }
-                $groupIndex++
+            $esatti = @()
+            $simili = @()
+            if ($null -ne $SyncHash.Result.Esatti) { $esatti = @($SyncHash.Result.Esatti) }
+            if ($null -ne $SyncHash.Result.Simili) { $simili = @($SyncHash.Result.Simili) }
+            $SyncHash.Result = $null
+
+            if ($esatti.Count -eq 0 -and $simili.Count -eq 0) { 
+                [System.Windows.Forms.MessageBox]::Show("No duplicates found!"); 
+                return 
             }
             
-            foreach ($gruppo in $simili) {
-                $bestSimilar = $gruppo | Sort-Object Length -Descending | Select-Object -First 1
-                $sizeMax = $bestSimilar.Length
-                foreach ($file in $gruppo) {
-                    $isBest = ($file.FullName -eq $bestSimilar.FullName)
-                    $dataMod = $file.LastWriteTime.ToString("MM/dd/yy HH:mm"); $dataCre = $file.CreationTime.ToString("MM/dd/yy HH:mm")
-                    $diffPerc = 0; if (-not $isBest) { $diffPerc = [math]::Round(($file.Length - $sizeMax) / $sizeMax * 100) }
-                    $dimensioneStr = Format-Size -Bytes $file.Length; if (-not $isBest) { $dimensioneStr += " ($diffPerc%)" }
-                    
-                    $anteprimaSimili += [PSCustomObject]@{
-                        Gruppo = $groupIndex
-                        Azione = if ($isBest) { "KEEP (Higher Quality)" } else { "EVALUATE (Lower Quality)" }
-                        Nome = $file.Name; Dimensione = $dimensioneStr; Modifica = $dataMod; Creazione = $dataCre
-                        Percorso = $file.FullName; OggettoOriginale = $file; Tipo = "Similar"; IsOriginal = $isBest
-                    }
-                }
-                $groupIndex++
-            }
-            
-            # SALVA I RISULTATI IN MEMORIA
-            $script:lastAnteprimaEsatti = $anteprimaEsatti
-            $script:lastAnteprimaSimili = $anteprimaSimili
+            $script:lastAnteprimaEsatti = $esatti
+            $script:lastAnteprimaSimili = $simili
             $btnReopenPreview.Enabled = $true
             
-            # MOSTRA L'ANTEPRIMA LA PRIMA VOLTA
-            Show-PreviewAndProcess -AnteprimaEsatti $anteprimaEsatti -AnteprimaSimili $anteprimaSimili
+            Show-PreviewAndProcess -AnteprimaEsatti $esatti -AnteprimaSimili $simili
         }
     })
 
     $btnAvvia.Add_Click({
         [string[]]$cartelle = @()
-        foreach ($item in $listBox.Items) { if ($item -and -not [string]::IsNullOrWhiteSpace($item.ToString())) { $cartelle += $item.ToString() } }
+        foreach ($row in $dgvFolders.Rows) { 
+            if ($row.Cells[0].Value -and -not [string]::IsNullOrWhiteSpace($row.Cells[0].Value.ToString())) { $cartelle += $row.Cells[0].Value.ToString() } 
+        }
         if ($cartelle.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Please add at least one folder!", "Warning", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
 
         [string[]]$estensioniScelte = @()
@@ -244,12 +278,14 @@ function Show-MainWindow {
         if ($chkDoc.Checked)   { $estensioniScelte += ".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx" }
         if ($estensioniScelte.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Select at least one file category!", "Warning", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
         
-        # NUOVA SCANSIONE: CANCELLA I RISULTATI VECCHI E DISABILITA IL PULSANTE
         $script:lastAnteprimaEsatti = $null
         $script:lastAnteprimaSimili = $null
         $btnReopenPreview.Enabled = $false
+        $script:startTime = Get-Date
+        $script:hashStartTime = $null
+        $script:estimatedTotalSeconds = $null
         
-        $btnAvvia.Enabled = $false; $btnAnnulla.Enabled = $true; $btnAggiungi.Enabled = $false; $btnRimuovi.Enabled = $false
+        $btnAvvia.Enabled = $false; $btnAnnulla.Enabled = $true; $btnAggiungi.Enabled = $false
         $chkAudio.Enabled = $false; $chkVideo.Enabled = $false; $chkFoto.Enabled = $false; $chkDoc.Enabled = $false
         
         $txtLog.Clear(); $SyncHash.Total = 0; $SyncHash.Progress = 0; $SyncHash.ScannedCount = 0
