@@ -8,7 +8,7 @@ function Show-MainWindow {
 
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Duplicate Finder PRO v11.26"
+    $form.Text = "Duplicate Finder PRO v11.28"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
@@ -299,7 +299,7 @@ function Show-MainWindow {
         
         $PowerShell = [powershell]::Create()
         $PowerShell.Runspace = [runspacefactory]::CreateRunspace(); $PowerShell.Runspace.Open()
-        $EnginePath = Join-Path $ModulePath "Engine.psm1"
+        $EnginePath = Join-Path $PSScriptRoot "Engine.psm1"
         
         $PowerShell.Runspace.SessionStateProxy.SetVariable("SyncHash", $SyncHash)
         $PowerShell.Runspace.SessionStateProxy.SetVariable("Cartelle", $cartelle)
@@ -318,3 +318,5 @@ function Show-MainWindow {
     [void]$form.ShowDialog()
 }
 Export-ModuleMember -Function Show-MainWindow
+
+
