@@ -1,8 +1,8 @@
 ﻿<#
 .SYNOPSIS
-    Motore di scansione, hashing e gestione della cache per Cerca Doppioni PRO.
+    Scanning, hashing, and cache engine for Duplicate Finder PRO.
 .NOTES
-    Versione: 10.2 (Filtro file cloud/offline e file troppo piccoli)
+    Version: 11.0 (English Translation)
 #>
 
 function Start-DuplicatiAnalysis {
@@ -19,38 +19,38 @@ function Start-DuplicatiAnalysis {
     try {
         $Cartelle = @($Cartelle | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
         if ($Cartelle.Count -eq 0) { 
-            Log "ERRORE: Nessuna cartella valida."; 
+            Log "ERROR: No valid folders provided."; 
             $SyncHash.Result = @{ Esatti = @(); Simili = @() }
             return 
         }
 
         $extensions = @()
         if ($TuttiIFile) {
-            Log "MODALITA UNIVERSALE: Ricerca di TUTTI i tipi di file."
+            Log "UNIVERSAL MODE: Searching for ALL file types."
         } else {
             if ($null -eq $EstensioniSelezionate -or $EstensioniSelezionate.Count -eq 0) {
-                Log "ERRORE: Nessun tipo di file selezionato per l'analisi."
+                Log "ERROR: No file types selected for analysis."
                 $SyncHash.Result = @{ Esatti = @(); Simili = @() }
                 return
             }
             $extensions = $EstensioniSelezionate | ForEach-Object { if ($_ -notmatch '^\*') { "*$_" } else { $_ } }
-            Log "Categorie selezionate: $($extensions -join ', ')"
+            Log "Selected categories: $($extensions -join ', ')"
         }
 
         $cachePath = Join-Path $BaseDir "output\cache_hash.csv"
         $cache = @{}
         if (Test-Path $cachePath) {
-            Log "Caricamento cache..."
+            Log "Loading cache..."
             try {
                 $cachedRows = Import-Csv -LiteralPath $cachePath -ErrorAction Stop
                 foreach ($row in $cachedRows) { $cache[$row.Path] = $row }
-                Log "Cache caricata: $($cache.Count) file."
+                Log "Cache loaded: $($cache.Count) files."
             } catch {
-                Log "AVVISO: Impossibile leggere la cache. Verrà ignorata. ($_)"
+                Log "WARNING: Could not read cache. Ignoring. ($_)"
             }
         }
         
-        Log "Fase 1: Ricerca file..."
+        Log "Phase 1: Searching files..."
         $files = @()
         $count = 0
         $sysExt = @('.exe','.dll','.sys','.tmp','.log','.ini','.lnk','.bat','.cmd','.msi','.cab','.dat')
@@ -59,25 +59,25 @@ function Start-DuplicatiAnalysis {
             if ($SyncHash.Cancelled) { break }
             
             if (-not (Test-Path -LiteralPath $cartella)) {
-                Log "ERRORE: La cartella '$cartella' non è raggiungibile. Salto."
+                Log "ERROR: Folder '$cartella' is not reachable. Skipping."
                 continue
             }
 
-            Log "Scansione: $cartella"
+            Log "Scanning: $cartella"
             try {
                 if ($TuttiIFile) {
                     $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { 
-                        $_.Length -gt 10240 -and # Ignora file < 10KB (segnaposto)
+                        $_.Length -gt 10240 -and 
                         $_.Extension -notin $sysExt -and 
                         $_.FullName -notmatch '\\Windows\\|\\\$Recycle\.Bin\\|\\System Volume Information\\' -and
                         $_.Name -notlike '~*' -and
-                        -not ($_.Attributes -band [System.IO.FileAttributes]::Offline) # Ignora file OneDrive/Cloud non scaricati
+                        -not ($_.Attributes -band [System.IO.FileAttributes]::Offline)
                     }
                 } else {
                     $fileList = Get-ChildItem -LiteralPath $cartella -Recurse -File -Include $extensions -Force -ErrorAction SilentlyContinue | Where-Object { 
-                        $_.Length -gt 10240 -and # Ignora file < 10KB (segnaposto)
+                        $_.Length -gt 10240 -and 
                         $_.Name -notlike '~*' -and
-                        -not ($_.Attributes -band [System.IO.FileAttributes]::Offline) # Ignora file OneDrive/Cloud non scaricati
+                        -not ($_.Attributes -band [System.IO.FileAttributes]::Offline)
                     }
                 }
 
@@ -88,23 +88,23 @@ function Start-DuplicatiAnalysis {
                     $SyncHash.ScannedCount = $count
                 }
             } catch {
-                Log "ERRORE durante la lettura di '$cartella': ($_)"
+                Log "ERROR reading '$cartella': ($_)"
             }
         }
-        if ($SyncHash.Cancelled) { Log "Annullato."; return }
+        if ($SyncHash.Cancelled) { Log "Cancelled."; return }
         
-        Log "Fase 2: Raggruppamento per dimensione..."
+        Log "Phase 2: Grouping by size..."
         $gruppiDimensione = $files | Group-Object Length | Where-Object Count -gt 1
         $totaleDaProcessare = ($gruppiDimensione | Measure-Object -Property Count -Sum).Sum
         
         if ($null -eq $totaleDaProcessare -or $totaleDaProcessare -eq 0) {
-            Log "Nessun file candidato (o nessun duplicato per dimensione)."
+            Log "No candidate files found (or no size duplicates)."
             $SyncHash.Result = @{ Esatti = @(); Simili = @() }
             return
         }
         
         $SyncHash.Total = $totaleDaProcessare
-        Log "Fase 3: Calcolo Hash per $totaleDaProcessare file..."
+        Log "Phase 3: Calculating Hash for $totaleDaProcessare files..."
         
         $duplicatiEsatti = @(); $cont = 0
         foreach ($g in $gruppiDimensione) {
@@ -123,7 +123,7 @@ function Start-DuplicatiAnalysis {
                         $h = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256 -ErrorAction Stop).Hash
                         if ($h) { $cache[$f.FullName] = [PSCustomObject]@{ Path = $f.FullName; Data = $dataModifica; Hash = $h } }
                     } catch {
-                        Log "AVVISO: File non leggibile (in uso o protetto): $($f.Name)"
+                        Log "WARNING: Unreadable file (in use or locked): $($f.Name)"
                     }
                 }
                 if ($h) {
@@ -134,28 +134,28 @@ function Start-DuplicatiAnalysis {
             foreach ($k in $hashMap.Keys) { if ($hashMap[$k].Count -gt 1) { $duplicatiEsatti += , $hashMap[$k] } }
         }
         
-        Log "Fase 4: Ricerca file con stesso nome ma dimensioni diverse..."
+        Log "Phase 4: Searching for files with same name but different sizes..."
         $duplicatiSimili = @()
         $nomiDaCercare = $files | Group-Object Name | Where-Object Count -gt 1
         foreach ($g in $nomiDaCercare) {
             $dimensioniUniche = ($g.Group.Length | Select-Object -Unique).Count
             if ($dimensioniUniche -gt 1) { $duplicatiSimili += , $g.Group }
         }
-        Log "Trovati $($duplicatiSimili.Count) gruppi simili."
+        Log "Found $($duplicatiSimili.Count) similar groups."
 
-        Log "Salvataggio cache..."
+        Log "Saving cache..."
         try {
             if (-not (Test-Path (Split-Path -Parent $cachePath))) { New-Item -ItemType Directory -Path (Split-Path -Parent $cachePath) -Force | Out-Null }
             $cache.Values | Export-Csv -Path $cachePath -NoTypeInformation -Encoding UTF8
         } catch {
-            Log "AVVISO: Impossibile salvare la cache. ($_)"
+            Log "WARNING: Could not save cache. ($_)"
         }
         
-        Log "Analisi completata! Trovati $($duplicatiEsatti.Count) gruppi identici."
+        Log "Analysis complete! Found $($duplicatiEsatti.Count) exact duplicate groups."
         $SyncHash.Result = @{ Esatti = $duplicatiEsatti; Simili = $duplicatiSimili }
         
     } catch { 
-        Log "ERRORE FATALE NEL MOTORE: $_" 
+        Log "FATAL ENGINE ERROR: $_" 
         $SyncHash.Result = $null
     } finally { 
         $SyncHash.HasFinished = $true
@@ -172,14 +172,14 @@ function Get-BestFile {
         $name = $_.Name
         
         if ($name -match '\(\d+\)') { $score += 100 }
-        if ($_.FullName -match 'vecchi')  { $score += 50 }
-        if ($name -match 'Copia')   { $score += 30 }
+        if ($_.FullName -match 'old')  { $score += 50 }
+        if ($name -match 'Copy')   { $score += 30 }
         if ($name -match '\d{8} - '){ $score += 20 }
 
         if ($name -match '^(VID|IMG|AUD|REC|MVI|DSC|PXL|GOPR|DJI|MOBILE|PTT)_?[-_0-9]') { $score += 80 }
         if ($name -match '^\d{8}[_-]\d{6}') { $score += 80 }
         if ($name -match '^\d{8}[-_]\d+') { $score += 60 }
-        if ($name -match '^(WhatsApp|WA|Screen Recording|Registrazione|Audio)') { $score += 40 }
+        if ($name -match '^(WhatsApp|WA|Screen Recording|Record)') { $score += 40 }
         if ($name -match 'Y2Mate') { $score += 100 }
         
         $letters = ($name -replace '[^a-zA-Z]', '').Length
@@ -190,12 +190,8 @@ function Get-BestFile {
         if ($name -match ' ') { $score -= 20 }
 
         [PSCustomObject]@{ 
-            File = $_; 
-            Score = $score; 
-            Size = $_.Length; 
-            LastWrite = $_.LastWriteTime; 
-            Creation = $_.CreationTime;
-            PathLength = $_.FullName.Length 
+            File = $_; Score = $score; Size = $_.Length; 
+            LastWrite = $_.LastWriteTime; Creation = $_.CreationTime; PathLength = $_.FullName.Length 
         }
     }
     

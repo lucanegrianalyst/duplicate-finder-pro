@@ -5,51 +5,49 @@ function Show-PreviewWindow {
     param($AnteprimaEsatti, $AnteprimaSimili)
     
     $formAnt = New-Object System.Windows.Forms.Form
-    $formAnt.Text = "Anteprima: Seleziona cosa vuoi eliminare"
+    $formAnt.Text = "Preview: Select what to delete"
     $formAnt.Size = New-Object System.Drawing.Size(1350, 750) 
     $formAnt.StartPosition = "CenterParent"
-    
-    # FIX: Rende la finestra ridimensionabile e massimizzabile
     $formAnt.FormBorderStyle = "Sizable"
     $formAnt.MaximizeBox = $true
     $formAnt.MinimumSize = New-Object System.Drawing.Size(1000, 600)
     
     $lblInfo = New-Object System.Windows.Forms.Label
-    $lblInfo.Text = "Doppio clic su '▶ Apri' per aprire il file. Doppio clic sul 'Percorso' per aprire la cartella."
+    $lblInfo.Text = "Double-click '▶ Open' to view file. Double-click 'Path' to open folder."
     $lblInfo.Location = New-Object System.Drawing.Point(10, 10); $lblInfo.AutoSize = $true; $lblInfo.ForeColor = [System.Drawing.Color]::Blue
     $lblInfo.Anchor = "Top, Left"
     $formAnt.Controls.Add($lblInfo)
 
     $btnSelAll = New-Object System.Windows.Forms.Button
-    $btnSelAll.Text = "Seleziona Tutti"; $btnSelAll.Location = New-Object System.Drawing.Point(10, 30); $btnSelAll.Size = New-Object System.Drawing.Size(120, 30); $btnSelAll.UseVisualStyleBackColor = $true
+    $btnSelAll.Text = "Select All"; $btnSelAll.Location = New-Object System.Drawing.Point(10, 30); $btnSelAll.Size = New-Object System.Drawing.Size(120, 30); $btnSelAll.UseVisualStyleBackColor = $true
     $btnSelAll.Anchor = "Top, Left"
     $formAnt.Controls.Add($btnSelAll)
 
     $btnDeselAll = New-Object System.Windows.Forms.Button
-    $btnDeselAll.Text = "Deseleziona Tutti"; $btnDeselAll.Location = New-Object System.Drawing.Point(140, 30); $btnDeselAll.Size = New-Object System.Drawing.Size(120, 30); $btnDeselAll.UseVisualStyleBackColor = $true
+    $btnDeselAll.Text = "Deselect All"; $btnDeselAll.Location = New-Object System.Drawing.Point(140, 30); $btnDeselAll.Size = New-Object System.Drawing.Size(120, 30); $btnDeselAll.UseVisualStyleBackColor = $true
     $btnDeselAll.Anchor = "Top, Left"
     $formAnt.Controls.Add($btnDeselAll)
 
     $chkShowSimilar = New-Object System.Windows.Forms.CheckBox
-    $chkShowSimilar.Text = "Mostra file simili (stesso nome, dimensioni diverse)"
+    $chkShowSimilar.Text = "Show similar files (same name, different sizes)"
     $chkShowSimilar.Location = New-Object System.Drawing.Point(280, 35); $chkShowSimilar.Size = New-Object System.Drawing.Size(350, 20)
     $chkShowSimilar.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold); $chkShowSimilar.Checked = $false; $chkShowSimilar.UseVisualStyleBackColor = $true
     $chkShowSimilar.Anchor = "Top, Left"
     $formAnt.Controls.Add($chkShowSimilar)
 
     $chkBoldOriginal = New-Object System.Windows.Forms.CheckBox
-    $chkBoldOriginal.Text = "Grassetto sugli originali"; $chkBoldOriginal.Location = New-Object System.Drawing.Point(650, 35); $chkBoldOriginal.Size = New-Object System.Drawing.Size(200, 20); $chkBoldOriginal.Checked = $true; $chkBoldOriginal.UseVisualStyleBackColor = $true
+    $chkBoldOriginal.Text = "Bold originals"; $chkBoldOriginal.Location = New-Object System.Drawing.Point(650, 35); $chkBoldOriginal.Size = New-Object System.Drawing.Size(200, 20); $chkBoldOriginal.Checked = $true; $chkBoldOriginal.UseVisualStyleBackColor = $true
     $chkBoldOriginal.Anchor = "Top, Left"
     $formAnt.Controls.Add($chkBoldOriginal)
 
     $lblSummary = New-Object System.Windows.Forms.Label
-    $lblSummary.Text = "Calcolo riepilogo..."; $lblSummary.Location = New-Object System.Drawing.Point(860, 35); $lblSummary.Size = New-Object System.Drawing.Size(460, 20)
+    $lblSummary.Text = "Calculating summary..."; $lblSummary.Location = New-Object System.Drawing.Point(860, 35); $lblSummary.Size = New-Object System.Drawing.Size(460, 20)
     $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblSummary.ForeColor = [System.Drawing.Color]::DarkSlateGray; $lblSummary.TextAlign = "MiddleRight"
-    $lblSummary.Anchor = "Top, Right" # Ancorato in alto a destra
+    $lblSummary.Anchor = "Top, Right"
     $formAnt.Controls.Add($lblSummary)
 
     $lblSearch = New-Object System.Windows.Forms.Label
-    $lblSearch.Text = "Cerca per nome:"; $lblSearch.Location = New-Object System.Drawing.Point(10, 70); $lblSearch.AutoSize = $true
+    $lblSearch.Text = "Search by name:"; $lblSearch.Location = New-Object System.Drawing.Point(10, 70); $lblSearch.AutoSize = $true
     $formAnt.Controls.Add($lblSearch)
 
     $txtSearch = New-Object System.Windows.Forms.TextBox
@@ -60,7 +58,6 @@ function Show-PreviewWindow {
     $listView = New-Object System.Windows.Forms.ListView
     $listView.Location = New-Object System.Drawing.Point(10, 100); $listView.Size = New-Object System.Drawing.Size(1310, 470)
     $listView.View = "Details"; $listView.CheckBoxes = $true; $listView.FullRowSelect = $true; $listView.GridLines = $true; $listView.HideSelection = $false
-    # FIX: La ListView si allarga e allunga in tutte le direzioni
     $listView.Anchor = "Top, Bottom, Left, Right"
     
     $imgList = New-Object System.Windows.Forms.ImageList
@@ -69,16 +66,16 @@ function Show-PreviewWindow {
     
     $listView.SmallImageList = $imgList
     
-    $listView.Columns.Add("Seleziona", 70) | Out-Null
-    $listView.Columns.Add("Gruppo", 60) | Out-Null
-    $listView.Columns.Add("Azione", 170) | Out-Null
-    $listView.Columns.Add("Azioni", 80) | Out-Null 
-    $listView.Columns.Add("Nome File", 280) | Out-Null 
-    $listView.Columns.Add("Tipo", 70) | Out-Null 
-    $listView.Columns.Add("Dimensione", 100) | Out-Null; 
-    $listView.Columns.Add("Modifica", 100) | Out-Null
-    $listView.Columns.Add("Creazione", 100) | Out-Null
-    $listView.Columns.Add("Percorso", 350) | Out-Null
+    $listView.Columns.Add("Select", 70) | Out-Null
+    $listView.Columns.Add("Group", 60) | Out-Null
+    $listView.Columns.Add("Action", 170) | Out-Null
+    $listView.Columns.Add("Actions", 80) | Out-Null 
+    $listView.Columns.Add("File Name", 280) | Out-Null 
+    $listView.Columns.Add("Type", 70) | Out-Null 
+    $listView.Columns.Add("Size", 100) | Out-Null; 
+    $listView.Columns.Add("Modified", 100) | Out-Null
+    $listView.Columns.Add("Created", 100) | Out-Null
+    $listView.Columns.Add("Path", 350) | Out-Null
     
     $script:lastClickX = 0; $script:lastClickY = 0; $script:searchText = ""
 
@@ -86,12 +83,12 @@ function Show-PreviewWindow {
         $selezionati = @($listView.Items | Where-Object { $_.Checked })
         $totEsatti = 0; $totSimili = 0; $byteTotali = 0
         foreach ($lv in $selezionati) {
-            if ($lv.Tag.Tipo -eq "Esatto") { $totEsatti++ } else { $totSimili++ }
+            if ($lv.Tag.Tipo -eq "Exact") { $totEsatti++ } else { $totSimili++ }
             $byteTotali += $lv.Tag.OggettoOriginale.Length
         }
         $mbTotali = [math]::Round($byteTotali / 1MB, 2); $gbTotali = [math]::Round($byteTotali / 1GB, 2)
         $testoSpazio = if ($gbTotali -ge 1) { "$gbTotali GB" } else { "$mbTotali MB" }
-        $lblSummary.Text = "Selezionati: $($selezionati.Count) file (Esatti: $totEsatti, Simili: $totSimili)  |  Spazio da liberare: $testoSpazio"
+        $lblSummary.Text = "Selected: $($selezionati.Count) files (Exact: $totEsatti, Similar: $totSimili)  |  Space to free: $testoSpazio"
     }
 
     $populateList = {
@@ -115,7 +112,7 @@ function Show-PreviewWindow {
             
             $lvItem.SubItems.Add($item.Gruppo.ToString()) | Out-Null
             $lvItem.SubItems.Add($item.Azione) | Out-Null
-            $lvItem.SubItems.Add("▶ Apri") | Out-Null
+            $lvItem.SubItems.Add("▶ Open") | Out-Null
             $lvItem.SubItems.Add($item.Nome) | Out-Null
             $lvItem.SubItems.Add($tipoFile) | Out-Null
             $lvItem.SubItems.Add($item.Dimensione) | Out-Null
@@ -126,10 +123,10 @@ function Show-PreviewWindow {
             if ($item.IsOriginal) { 
                 $lvItem.ForeColor = [System.Drawing.Color]::Green 
                 if ($chkBoldOriginal.Checked) { $lvItem.Font = New-Object System.Drawing.Font($listView.Font, [System.Drawing.FontStyle]::Bold) }
-            } elseif ($item.Tipo -eq "Simile") { $lvItem.ForeColor = [System.Drawing.Color]::DarkOrange }
+            } elseif ($item.Tipo -eq "Similar") { $lvItem.ForeColor = [System.Drawing.Color]::DarkOrange }
             else { $lvItem.ForeColor = [System.Drawing.Color]::Red }
             
-            if (-not $item.IsOriginal -and $item.Tipo -eq "Esatto") { $lvItem.Checked = $true }
+            if (-not $item.IsOriginal -and $item.Tipo -eq "Exact") { $lvItem.Checked = $true }
             $lvItem.Tag = $item; $listView.Items.Add($lvItem) | Out-Null
         }
         $listView.EndUpdate(); & $updateSummary
@@ -159,7 +156,7 @@ function Show-PreviewWindow {
     })
 
     $contextMenu = New-Object System.Windows.Forms.ContextMenuStrip
-    $menuOpenFile = $contextMenu.Items.Add("▶ Apri File"); $menuOpenFolder = $contextMenu.Items.Add("📁 Apri Cartella"); $menuCopyPath = $contextMenu.Items.Add("📋 Copia Percorso")
+    $menuOpenFile = $contextMenu.Items.Add("▶ Open File"); $menuOpenFolder = $contextMenu.Items.Add("📁 Open Folder"); $menuCopyPath = $contextMenu.Items.Add("📋 Copy Path")
     $listView.ContextMenuStrip = $contextMenu
     $menuOpenFile.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Start-Process $listView.SelectedItems[0].Tag.Percorso } })
     $menuOpenFolder.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Start-Process explorer.exe -ArgumentList "/select,`"$($listView.SelectedItems[0].Tag.Percorso)`"" } })
@@ -173,14 +170,14 @@ function Show-PreviewWindow {
     $formAnt.Controls.Add($listView)
     
     $btnProcedi = New-Object System.Windows.Forms.Button
-    $btnProcedi.Text = "PROCEDI CON LE SELEZIONATI"; $btnProcedi.Location = New-Object System.Drawing.Point(10, 580); $btnProcedi.Size = New-Object System.Drawing.Size(500, 40); $btnProcedi.BackColor = [System.Drawing.Color]::LightGreen
+    $btnProcedi.Text = "PROCEED WITH SELECTED"; $btnProcedi.Location = New-Object System.Drawing.Point(10, 580); $btnProcedi.Size = New-Object System.Drawing.Size(500, 40); $btnProcedi.BackColor = [System.Drawing.Color]::LightGreen
     $btnProcedi.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $btnProcedi.UseVisualStyleBackColor = $true
-    $btnProcedi.Anchor = "Bottom, Left" # Ancorato in basso a sinistra
+    $btnProcedi.Anchor = "Bottom, Left"
     $formAnt.Controls.Add($btnProcedi)
     
     $btnAnnAnt = New-Object System.Windows.Forms.Button
-    $btnAnnAnt.Text = "ANNULLA"; $btnAnnAnt.Location = New-Object System.Drawing.Point(550, 580); $btnAnnAnt.Size = New-Object System.Drawing.Size(770, 40); $btnAnnAnt.BackColor = [System.Drawing.Color]::LightCoral; $btnAnnAnt.UseVisualStyleBackColor = $true
-    $btnAnnAnt.Anchor = "Bottom, Right" # Ancorato in basso a destra
+    $btnAnnAnt.Text = "CANCEL"; $btnAnnAnt.Location = New-Object System.Drawing.Point(550, 580); $btnAnnAnt.Size = New-Object System.Drawing.Size(770, 40); $btnAnnAnt.BackColor = [System.Drawing.Color]::LightCoral; $btnAnnAnt.UseVisualStyleBackColor = $true
+    $btnAnnAnt.Anchor = "Bottom, Right"
     $formAnt.Controls.Add($btnAnnAnt)
     
     & $populateList

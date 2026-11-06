@@ -9,7 +9,7 @@ if (-not $baseDir -or $baseDir -eq "") { $baseDir = "C:\cerca doppioni" }
 $ModulePath = Join-Path $baseDir "Modules"
 
 if (-not (Test-Path "$ModulePath\GUI_Main.psm1")) {
-    [System.Windows.Forms.MessageBox]::Show("Errore: impossibile trovare la cartella Modules.`n`nPercorso cercato:`n$ModulePath")
+    [System.Windows.Forms.MessageBox]::Show("Error: Cannot find Modules folder.`n`nSearched path:`n$ModulePath")
     exit
 }
 

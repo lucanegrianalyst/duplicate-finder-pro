@@ -1,44 +1,43 @@
+# 🎵 Duplicate Finder PRO
 
-# 🎵 Cerca Doppioni PRO
+A powerful GUI tool to find and manage duplicate files on Windows, optimized for music libraries, photo folders, and videos, even across multiple drives.
 
-Un potente strumento con interfaccia grafica per trovare e gestire file duplicati su Windows, ottimizzato per librerie musicali, cartelle di foto e video.
+![Version](https://img.shields.io/badge/version-11.0-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
+![Language](https://img.shields.io/badge/PowerShell-5.1%2B-blueviolet.svg)
 
-## 📖 Descrizione
+## 📖 Description
 
-**Cerca Doppioni PRO** è un'applicazione desktop scritta in PowerShell che sfrutta l'algoritmo **SHA-256** per identificare con precisione matematica i file identici byte per byte. Offre un'anteprima interattiva, un sistema di scelta intelligente dell'originale e la possibilità di spostare i file nel cestino in modo sicuro.
+**Duplicate Finder PRO** is a desktop application written in PowerShell that leverages the **SHA-256** algorithm to identify byte-for-byte identical files with mathematical precision. 
+Unlike other tools, it offers an interactive preview, an intelligent original-file selection system (based on quality, date, and name), and the ability to safely move files to the Recycle Bin.
 
-## ✨ Funzionalità principali
+## ✨ Key Features
 
-- **Scansione Multi-Disco**: Analizza più cartelle e dischi contemporaneamente.
-- **Filtro per Categorie**: Seleziona quali tipi di file analizzare (Audio, Video, Immagini, Documenti).
-- **Scelta Intelligente dell'Originale**: Il file da tenere viene scelto in base a dimensione, data e pulizia del nome.
-- **Scansione Incrementale**: Una cache locale rende le scansioni successive fulminee.
-- **Filtro Cloud**: Ignora i file "segnaposto" di OneDrive o Google Drive non scaricati.
-- **Anteprima Interattiva**: Tabella ridimensionabile con colori (verde = originale, rosso = copia) e doppio clic per aprire i file.
-- **Sicurezza**: Sposta i file nel cestino di default. L'eliminazione definitiva richiede conferma.
-- **Log delle Operazioni**: Ogni azione viene registrata in output/operazioni.log.
+- 🔍 **Multi-Drive Scanning**: Analyze multiple folders and drives simultaneously.
+- 🎯 **Category Filtering**: Choose which file types to analyze (Audio, Video, Images, Documents).
+- 🧠 **Intelligent Original Selection**: The file to keep is chosen based on:
+  1. Size (quality)
+  2. Modified and Created dates (most recent)
+  3. Clean file name (avoids `(1)`, `Copy`, `VID_`, etc.)
+- ⚡ **Incremental Scanning**: A local cache prevents re-hashing already analyzed files, making subsequent scans lightning fast.
+- ☁️ **Cloud Filter**: Ignores OneDrive or Google Drive placeholders that haven't been downloaded yet.
+- 👁️ **Interactive Preview**: Resizable table with color-coding (green = original, red = copy), file icons, and double-click to open files or folders.
+- 🛡️ **Safety First**: Moves files to the trash (reversible) by default. Permanent deletion requires double confirmation.
+- 📝 **Operation Logs**: Every action is recorded in `output/operations.log`.
 
-## 🚀 Come usare il programma
+## 🚀 How to Use
 
-1. Avvia CercaDoppioniMultiHD.exe.
-2. Seleziona la cartella o il disco da analizzare.
-3. Spunta le categorie di file che ti interessano.
-4. Clicca **AVVIA ANALISI**.
-5. Nell'anteprima, controlla i file trovati e clicca **PROCEDI**.
+1. Download the latest release (or compile the `.exe` as explained below).
+2. Launch `CercaDoppioniMultiHD.exe`.
+3. Select the folder or drive to analyze.
+4. Check the file categories you're interested in.
+5. Click **START ANALYSIS**.
+6. In the preview window, review the found files (you can search or open them) and click **PROCEED**.
 
-## 📁 Struttura del Progetto
+## 🛠️ How to Compile
 
-Il progetto segue un'architettura modulare:
-
-```text
-cerca-doppioni/
-├── CercaDoppioni.ps1          # Script di avvio
-├── Modules/
-│   ├── Engine.psm1            # Motore di scansione e Hashing
-│   ├── GUI_Main.psm1          # Finestra principale
-│   ├── GUI_Preview.psm1       # Finestra di anteprima
-│   ├── GUI_Utils.psm1         # Funzioni di utilità per la GUI
-│   └── Reporter.psm1          # Gestione cestino e log
-├── config/
-│   └── settings.json          # Configurazione estensioni
-└── output/                    # Report e Log (ignorati da Git)
+If you want to compile from source:
+1. Install the `ps2exe` module: `Install-Module -Name ps2exe -Scope CurrentUser -Force`
+2. In the project folder, run:
+```powershell
+Invoke-PS2EXE -InputFile "C:\cerca doppioni\CercaDoppioni.ps1" -OutputFile "C:\cerca doppioni\CercaDoppioniMultiHD.exe" -NoConsole

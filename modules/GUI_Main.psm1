@@ -9,14 +9,14 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Cerca Doppioni PRO v10.0 (Modulare)"
+    $form.Text = "Duplicate Finder PRO v11.0"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
 
     $lblTitle = New-Object System.Windows.Forms.Label
-    $lblTitle.Text = "1. Cartelle da analizzare:"; $lblTitle.Location = New-Object System.Drawing.Point(20, 15)
+    $lblTitle.Text = "1. Folders to analyze:"; $lblTitle.Location = New-Object System.Drawing.Point(20, 15)
     $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblTitle.AutoSize = $true
     $form.Controls.Add($lblTitle)
 
@@ -25,15 +25,15 @@ function Show-MainWindow {
     $form.Controls.Add($listBox)
 
     $btnAggiungi = New-Object System.Windows.Forms.Button
-    $btnAggiungi.Text = "+ Aggiungi"; $btnAggiungi.Location = New-Object System.Drawing.Point(560, 40); $btnAggiungi.Size = New-Object System.Drawing.Size(100, 30); $btnAggiungi.UseVisualStyleBackColor = $true
+    $btnAggiungi.Text = "+ Add"; $btnAggiungi.Location = New-Object System.Drawing.Point(560, 40); $btnAggiungi.Size = New-Object System.Drawing.Size(100, 30); $btnAggiungi.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAggiungi)
 
     $btnRimuovi = New-Object System.Windows.Forms.Button
-    $btnRimuovi.Text = "- Rimuovi"; $btnRimuovi.Location = New-Object System.Drawing.Point(560, 75); $btnRimuovi.Size = New-Object System.Drawing.Size(100, 30); $btnRimuovi.UseVisualStyleBackColor = $true
+    $btnRimuovi.Text = "- Remove"; $btnRimuovi.Location = New-Object System.Drawing.Point(560, 75); $btnRimuovi.Size = New-Object System.Drawing.Size(100, 30); $btnRimuovi.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnRimuovi)
 
     $grpFiles = New-Object System.Windows.Forms.GroupBox
-    $grpFiles.Text = "2. Tipi di file da analizzare"; $grpFiles.Location = New-Object System.Drawing.Point(20, 120)
+    $grpFiles.Text = "2. File types to analyze"; $grpFiles.Location = New-Object System.Drawing.Point(20, 120)
     $grpFiles.Size = New-Object System.Drawing.Size(640, 90); $grpFiles.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
     $form.Controls.Add($grpFiles)
 
@@ -46,34 +46,34 @@ function Show-MainWindow {
     $grpFiles.Controls.Add($chkVideo)
 
     $chkFoto = New-Object System.Windows.Forms.CheckBox
-    $chkFoto.Text = "🖼️ Immagini (.jpg, .png, .gif...)"; $chkFoto.Location = New-Object System.Drawing.Point(320, 25); $chkFoto.AutoSize = $true; $chkFoto.Checked = $true; $chkFoto.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $chkFoto.Text = "🖼️ Images (.jpg, .png, .gif...)"; $chkFoto.Location = New-Object System.Drawing.Point(320, 25); $chkFoto.AutoSize = $true; $chkFoto.Checked = $true; $chkFoto.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $grpFiles.Controls.Add($chkFoto)
 
     $chkDoc = New-Object System.Windows.Forms.CheckBox
-    $chkDoc.Text = "📄 Documenti (.pdf, .doc, .txt...)"; $chkDoc.Location = New-Object System.Drawing.Point(320, 55); $chkDoc.AutoSize = $true; $chkDoc.Checked = $false; $chkDoc.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+    $chkDoc.Text = "📄 Documents (.pdf, .doc, .txt...)"; $chkDoc.Location = New-Object System.Drawing.Point(320, 55); $chkDoc.AutoSize = $true; $chkDoc.Checked = $false; $chkDoc.Font = New-Object System.Drawing.Font("Segoe UI", 9)
     $grpFiles.Controls.Add($chkDoc)
 
     $lblAction = New-Object System.Windows.Forms.Label
-    $lblAction.Text = "3. Azioni"; $lblAction.Location = New-Object System.Drawing.Point(20, 220)
+    $lblAction.Text = "3. Actions"; $lblAction.Location = New-Object System.Drawing.Point(20, 220)
     $lblAction.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblAction.AutoSize = $true
     $form.Controls.Add($lblAction)
 
     $chkElimina = New-Object System.Windows.Forms.CheckBox
-    $chkElimina.Text = "Elimina definitivamente (altrimenti sposta nel cestino)"; $chkElimina.Location = New-Object System.Drawing.Point(20, 245); $chkElimina.AutoSize = $true; $chkElimina.UseVisualStyleBackColor = $true
+    $chkElimina.Text = "Delete permanently (otherwise move to trash)"; $chkElimina.Location = New-Object System.Drawing.Point(20, 245); $chkElimina.AutoSize = $true; $chkElimina.UseVisualStyleBackColor = $true
     $form.Controls.Add($chkElimina)
 
     $btnAvvia = New-Object System.Windows.Forms.Button
-    $btnAvvia.Text = "AVVIA ANALISI"; $btnAvvia.Location = New-Object System.Drawing.Point(20, 275)
+    $btnAvvia.Text = "START ANALYSIS"; $btnAvvia.Location = New-Object System.Drawing.Point(20, 275)
     $btnAvvia.Size = New-Object System.Drawing.Size(640, 45); $btnAvvia.BackColor = [System.Drawing.Color]::LightGreen
     $btnAvvia.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold); $btnAvvia.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAvvia)
 
     $btnAnnulla = New-Object System.Windows.Forms.Button
-    $btnAnnulla.Text = "ANNULLA"; $btnAnnulla.Location = New-Object System.Drawing.Point(20, 330); $btnAnnulla.Size = New-Object System.Drawing.Size(100, 30); $btnAnnulla.Enabled = $false; $btnAnnulla.UseVisualStyleBackColor = $true
+    $btnAnnulla.Text = "CANCEL"; $btnAnnulla.Location = New-Object System.Drawing.Point(20, 330); $btnAnnulla.Size = New-Object System.Drawing.Size(100, 30); $btnAnnulla.Enabled = $false; $btnAnnulla.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAnnulla)
 
     $lblCounter = New-Object System.Windows.Forms.Label
-    $lblCounter.Text = "In attesa..."; $lblCounter.Location = New-Object System.Drawing.Point(130, 338); $lblCounter.Size = New-Object System.Drawing.Size(200, 20)
+    $lblCounter.Text = "Waiting..."; $lblCounter.Location = New-Object System.Drawing.Point(130, 338); $lblCounter.Size = New-Object System.Drawing.Size(200, 20)
     $form.Controls.Add($lblCounter)
 
     $pb = New-Object System.Windows.Forms.ProgressBar
@@ -99,7 +99,7 @@ function Show-MainWindow {
         if ($fb.ShowDialog() -eq "OK" -and -not $listBox.Items.Contains($fb.SelectedPath)) { $listBox.Items.Add($fb.SelectedPath) | Out-Null }
     })
     $btnRimuovi.Add_Click({ if ($listBox.SelectedIndex -ge 0) { $listBox.Items.RemoveAt($listBox.SelectedIndex) } })
-    $btnAnnulla.Add_Click({ $SyncHash.Cancelled = $true; $txtLog.AppendText("`r`nAnnullamento...`r`n") })
+    $btnAnnulla.Add_Click({ $SyncHash.Cancelled = $true; $txtLog.AppendText("`r`nCancelling...`r`n") })
 
     $timer = New-Object System.Windows.Forms.Timer
     $timer.Interval = 200
@@ -111,11 +111,11 @@ function Show-MainWindow {
             $txtLog.SelectionStart = $txtLog.Text.Length; $txtLog.ScrollToCaret()
         }
         
-        if ($SyncHash.ScannedCount -gt 0 -and $SyncHash.Total -eq 0) { $lblCounter.Text = "Scansione: $($SyncHash.ScannedCount) file..." }
+        if ($SyncHash.ScannedCount -gt 0 -and $SyncHash.Total -eq 0) { $lblCounter.Text = "Scanning: $($SyncHash.ScannedCount) files..." }
         if ($SyncHash.Total -gt 0) {
             if ($pb.Style -ne "Blocks") { $pb.Style = "Blocks" }
             $pb.Maximum = $SyncHash.Total; $pb.Value = [math]::Min($SyncHash.Progress, $SyncHash.Total)
-            $lblCounter.Text = "Hash: $($SyncHash.Progress) di $($SyncHash.Total)"
+            $lblCounter.Text = "Hash: $($SyncHash.Progress) of $($SyncHash.Total)"
         }
 
         if ($SyncHash.HasFinished -eq $true) {
@@ -123,16 +123,16 @@ function Show-MainWindow {
             
             $btnAvvia.Enabled = $true; $btnAnnulla.Enabled = $false; $btnAggiungi.Enabled = $true; $btnRimuovi.Enabled = $true
             $chkAudio.Enabled = $true; $chkVideo.Enabled = $true; $chkFoto.Enabled = $true; $chkDoc.Enabled = $true
-            $lblCounter.Text = "Completato!"; $pb.Style = "Blocks"; $pb.Value = 0; $lblResultSummary.Text = "" 
+            $lblCounter.Text = "Completed!"; $pb.Style = "Blocks"; $pb.Value = 0; $lblResultSummary.Text = "" 
             
-            if ($SyncHash.Cancelled) { $txtLog.AppendText("`r`nOperazione annullata dall'utente.`r`n"); return }
+            if ($SyncHash.Cancelled) { $txtLog.AppendText("`r`nOperation cancelled by user.`r`n"); return }
             if ($null -eq $SyncHash.Result) {
-                [System.Windows.Forms.MessageBox]::Show("L'analisi è stata interrotta da un errore critico.", "Errore", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                [System.Windows.Forms.MessageBox]::Show("Analysis interrupted by a critical error.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
                 return
             }
 
             $esatti = $SyncHash.Result.Esatti; $simili = $SyncHash.Result.Simili; $SyncHash.Result = $null
-            if ($esatti.Count -eq 0 -and $simili.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Nessun duplicato trovato!"); return }
+            if ($esatti.Count -eq 0 -and $simili.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("No duplicates found!"); return }
             
             $anteprimaEsatti = @(); $anteprimaSimili = @(); $groupIndex = 1
             
@@ -140,13 +140,13 @@ function Show-MainWindow {
                 $daTenere = Get-BestFile -Files $gruppo
                 foreach ($file in $gruppo) {
                     $isOriginal = ($file.FullName -eq $daTenere.FullName)
-                    $dataMod = $file.LastWriteTime.ToString("dd/MM/yy HH:mm"); $dataCre = $file.CreationTime.ToString("dd/MM/yy HH:mm")
+                    $dataMod = $file.LastWriteTime.ToString("MM/dd/yy HH:mm"); $dataCre = $file.CreationTime.ToString("MM/dd/yy HH:mm")
                     $anteprimaEsatti += [PSCustomObject]@{
                         Gruppo = $groupIndex
-                        Azione = if ($isOriginal) { "TENERE (Originale)" } else { "ELIMINARE (Copia)" }
+                        Azione = if ($isOriginal) { "KEEP (Original)" } else { "DELETE (Copy)" }
                         Nome = $file.Name; Dimensione = Format-Size -Bytes $file.Length
-                        Modifica = if ($isOriginal) { "$dataMod ★" } else { $dataMod }; Creazione = if ($isOriginal) { "$dataCre ★" } else { $dataCre }
-                        Percorso = $file.FullName; OggettoOriginale = $file; Tipo = "Esatto"; IsOriginal = $isOriginal
+                        Modifica = if ($isOriginal) { "$dataMod *" } else { $dataMod }; Creazione = if ($isOriginal) { "$dataCre *" } else { $dataCre }
+                        Percorso = $file.FullName; OggettoOriginale = $file; Tipo = "Exact"; IsOriginal = $isOriginal
                     }
                 }
                 $groupIndex++
@@ -157,15 +157,15 @@ function Show-MainWindow {
                 $sizeMax = $bestSimilar.Length
                 foreach ($file in $gruppo) {
                     $isBest = ($file.FullName -eq $bestSimilar.FullName)
-                    $dataMod = $file.LastWriteTime.ToString("dd/MM/yy HH:mm"); $dataCre = $file.CreationTime.ToString("dd/MM/yy HH:mm")
+                    $dataMod = $file.LastWriteTime.ToString("MM/dd/yy HH:mm"); $dataCre = $file.CreationTime.ToString("MM/dd/yy HH:mm")
                     $diffPerc = 0; if (-not $isBest) { $diffPerc = [math]::Round(($file.Length - $sizeMax) / $sizeMax * 100) }
                     $dimensioneStr = Format-Size -Bytes $file.Length; if (-not $isBest) { $dimensioneStr += " ($diffPerc%)" }
                     
                     $anteprimaSimili += [PSCustomObject]@{
                         Gruppo = $groupIndex
-                        Azione = if ($isBest) { "TENERE (Qualità Maggiore)" } else { "VALUTA (Qualità Minore)" }
+                        Azione = if ($isBest) { "KEEP (Higher Quality)" } else { "EVALUATE (Lower Quality)" }
                         Nome = $file.Name; Dimensione = $dimensioneStr; Modifica = $dataMod; Creazione = $dataCre
-                        Percorso = $file.FullName; OggettoOriginale = $file; Tipo = "Simile"; IsOriginal = $isBest
+                        Percorso = $file.FullName; OggettoOriginale = $file; Tipo = "Similar"; IsOriginal = $isBest
                     }
                 }
                 $groupIndex++
@@ -176,23 +176,23 @@ function Show-MainWindow {
             if ($selezionati.Count -gt 0) {
                 $procedi = $true
                 if ($chkElimina.Checked) {
-                    $msg = "Stai per ELIMINARE DEFINITIVAMENTE $($selezionati.Count) file.`n`nQuesta azione è IRREVERSIBILE e i file non finiranno nel cestino.`n`nSei sicuro di voler procedere?"
-                    $res = [System.Windows.Forms.MessageBox]::Show($msg, "Conferma Eliminazione", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                    $msg = "You are about to PERMANENTLY DELETE $($selezionati.Count) files.`n`nThis action is IRREVERSIBLE and files will not go to the trash.`n`nAre you sure?"
+                    $res = [System.Windows.Forms.MessageBox]::Show($msg, "Confirm Deletion", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
                     if ($res -ne [System.Windows.Forms.DialogResult]::Yes) { $procedi = $false }
                 }
                 
                 if ($procedi) {
                     $res = Invoke-DuplicatiAction -Anteprima $selezionati -Elimina $chkElimina.Checked -BaseDir $BaseDir
                     foreach ($logLine in $res.Log) { $txtLog.AppendText("$logLine`r`n") }
-                    $txtLog.AppendText("`r`nFINITO! File gestiti: $($res.Gestiti)`r`n")
+                    $txtLog.AppendText("`r`nDONE! Files processed: $($res.Gestiti)`r`n")
                     $txtLog.SelectionStart = $txtLog.Text.Length; $txtLog.ScrollToCaret()
                     
                     $spazioStr = Format-Size -Bytes $res.Spazio
-                    $azioneStr = if ($chkElimina.Checked) { "eliminati definitivamente" } else { "spostati nel cestino" }
-                    $lblResultSummary.Text = "Operazione completata!`r`n$($res.Gestiti) file $azioneStr. Spazio recuperato: $spazioStr.`r`nPercorso: $($res.Destinazione)"
+                    $azioneStr = if ($chkElimina.Checked) { "permanently deleted" } else { "moved to trash" }
+                    $lblResultSummary.Text = "Operation complete!`r`n$($res.Gestiti) files $azioneStr. Space freed: $spazioStr.`r`nPath: $($res.Destinazione)"
                 }
             } else {
-                $txtLog.AppendText("`r`nNessun file selezionato per la pulizia.`r`n")
+                $txtLog.AppendText("`r`nNo files selected for cleanup.`r`n")
             }
         }
     })
@@ -200,14 +200,14 @@ function Show-MainWindow {
     $btnAvvia.Add_Click({
         [string[]]$cartelle = @()
         foreach ($item in $listBox.Items) { if ($item -and -not [string]::IsNullOrWhiteSpace($item.ToString())) { $cartelle += $item.ToString() } }
-        if ($cartelle.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Aggiungi almeno una cartella!", "Attenzione", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
+        if ($cartelle.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Please add at least one folder!", "Warning", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
 
         [string[]]$estensioniScelte = @()
         if ($chkAudio.Checked) { $estensioniScelte += ".mp3", ".wav", ".flac", ".m4a", ".ogg", ".aac", ".wma" }
         if ($chkVideo.Checked) { $estensioniScelte += ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm" }
         if ($chkFoto.Checked)  { $estensioniScelte += ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".heic" }
         if ($chkDoc.Checked)   { $estensioniScelte += ".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx" }
-        if ($estensioniScelte.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Seleziona almeno una categoria di file!", "Attenzione", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
+        if ($estensioniScelte.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Select at least one file category!", "Warning", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
         
         $btnAvvia.Enabled = $false; $btnAnnulla.Enabled = $true; $btnAggiungi.Enabled = $false; $btnRimuovi.Enabled = $false
         $chkAudio.Enabled = $false; $chkVideo.Enabled = $false; $chkFoto.Enabled = $false; $chkDoc.Enabled = $false
