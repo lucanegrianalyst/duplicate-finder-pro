@@ -9,7 +9,7 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\GUI_Utils.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Duplicate Finder PRO v11.8"
+    $form.Text = "Duplicate Finder PRO v11.9"
     $form.Size = New-Object System.Drawing.Size(700, 820) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
@@ -72,12 +72,17 @@ function Show-MainWindow {
     $btnAnnulla.Text = "CANCEL"; $btnAnnulla.Location = New-Object System.Drawing.Point(20, 330); $btnAnnulla.Size = New-Object System.Drawing.Size(100, 30); $btnAnnulla.Enabled = $false; $btnAnnulla.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAnnulla)
 
+    # NUOVO PULSANTE PER RIAPRIRE L'ANTEPRIMA
+    $btnReopenPreview = New-Object System.Windows.Forms.Button
+    $btnReopenPreview.Text = "SHOW LAST RESULTS"; $btnReopenPreview.Location = New-Object System.Drawing.Point(130, 330); $btnReopenPreview.Size = New-Object System.Drawing.Size(150, 30); $btnReopenPreview.Enabled = $false; $btnReopenPreview.UseVisualStyleBackColor = $true
+    $form.Controls.Add($btnReopenPreview)
+
     $lblCounter = New-Object System.Windows.Forms.Label
-    $lblCounter.Text = "Waiting..."; $lblCounter.Location = New-Object System.Drawing.Point(130, 338); $lblCounter.Size = New-Object System.Drawing.Size(200, 20)
+    $lblCounter.Text = "Waiting..."; $lblCounter.Location = New-Object System.Drawing.Point(290, 338); $lblCounter.Size = New-Object System.Drawing.Size(160, 20)
     $form.Controls.Add($lblCounter)
 
     $pb = New-Object System.Windows.Forms.ProgressBar
-    $pb.Location = New-Object System.Drawing.Point(340, 335); $pb.Size = New-Object System.Drawing.Size(320, 20)
+    $pb.Location = New-Object System.Drawing.Point(450, 335); $pb.Size = New-Object System.Drawing.Size(210, 20)
     $form.Controls.Add($pb)
 
     $txtLog = New-Object System.Windows.Forms.TextBox
@@ -90,12 +95,49 @@ function Show-MainWindow {
     $lblResultSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold); $lblResultSummary.ForeColor = [System.Drawing.Color]::DarkGreen; $lblResultSummary.TextAlign = "MiddleCenter"
     $form.Controls.Add($lblResultSummary)
 
-    # FIX: Aggiunta la conferma di uscita
     $form.Add_FormClosing({
         param($sender, $e)
         $res = [System.Windows.Forms.MessageBox]::Show("Are you sure you want to exit?", "Confirm Exit", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
-        if ($res -ne [System.Windows.Forms.DialogResult]::Yes) {
-            $e.Cancel = $true
+        if ($res -ne [System.Windows.Forms.DialogResult]::Yes) { $e.Cancel = $true }
+    })
+
+    # VARIABILI PER SALVARE I RISULTATI IN MEMORIA
+    $script:lastAnteprimaEsatti = $null
+    $script:lastAnteprimaSimili = $null
+
+    # FUNZIONE CONDIVISA PER MOSTRARE L'ANTEPRIMA E PROCESSARE I FILE
+    function Show-PreviewAndProcess {
+        param($AnteprimaEsatti, $AnteprimaSimili)
+        $risultatoGrezzo = Show-PreviewWindow -AnteprimaEsatti $AnteprimaEsatti -AnteprimaSimili $AnteprimaSimili
+        $selezionati = @($risultatoGrezzo | Where-Object { $null -ne $_ -and $_.PSObject.Properties.Name -contains 'Percorso' })
+
+        if ($selezionati.Count -gt 0) {
+            $procedi = $true
+            if ($chkElimina.Checked) {
+                $msg = "You are about to PERMANENTLY DELETE $($selezionati.Count) files.`n`nThis action is IRREVERSIBLE and files will not go to the trash.`n`nAre you sure?"
+                $res = [System.Windows.Forms.MessageBox]::Show($msg, "Confirm Deletion", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                if ($res -ne [System.Windows.Forms.DialogResult]::Yes) { $procedi = $false }
+            }
+            
+            if ($procedi) {
+                $res = Invoke-DuplicatiAction -Anteprima $selezionati -Elimina $chkElimina.Checked -BaseDir $BaseDir
+                foreach ($logLine in $res.Log) { $txtLog.AppendText("$logLine`r`n") }
+                $txtLog.AppendText("`r`nDONE! Files processed: $($res.Gestiti)`r`n")
+                $txtLog.SelectionStart = $txtLog.Text.Length; $txtLog.ScrollToCaret()
+                
+                $spazioStr = Format-Size -Bytes $res.Spazio
+                $azioneStr = if ($chkElimina.Checked) { "permanently deleted" } else { "moved to trash" }
+                $lblResultSummary.Text = "Operation complete!`r`n$($res.Gestiti) files $azioneStr. Space freed: $spazioStr.`r`nPath: $($res.Destinazione)"
+            }
+        } else {
+            $txtLog.AppendText("`r`nNo files selected for cleanup.`r`n")
+        }
+    }
+
+    # EVENTO CLIC PER IL PULSANTE "SHOW LAST RESULTS"
+    $btnReopenPreview.Add_Click({
+        if ($null -ne $script:lastAnteprimaEsatti -or $null -ne $script:lastAnteprimaSimili) {
+            Show-PreviewAndProcess -AnteprimaEsatti $script:lastAnteprimaEsatti -AnteprimaSimili $script:lastAnteprimaSimili
         }
     })
 
@@ -180,30 +222,13 @@ function Show-MainWindow {
                 $groupIndex++
             }
             
-            $risultatoGrezzo = Show-PreviewWindow -AnteprimaEsatti $anteprimaEsatti -AnteprimaSimili $anteprimaSimili
-            $selezionati = @($risultatoGrezzo | Where-Object { $null -ne $_ -and $_.PSObject.Properties.Name -contains 'Percorso' })
+            # SALVA I RISULTATI IN MEMORIA
+            $script:lastAnteprimaEsatti = $anteprimaEsatti
+            $script:lastAnteprimaSimili = $anteprimaSimili
+            $btnReopenPreview.Enabled = $true
             
-            if ($selezionati.Count -gt 0) {
-                $procedi = $true
-                if ($chkElimina.Checked) {
-                    $msg = "You are about to PERMANENTLY DELETE $($selezionati.Count) files.`n`nThis action is IRREVERSIBLE and files will not go to the trash.`n`nAre you sure?"
-                    $res = [System.Windows.Forms.MessageBox]::Show($msg, "Confirm Deletion", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
-                    if ($res -ne [System.Windows.Forms.DialogResult]::Yes) { $procedi = $false }
-                }
-                
-                if ($procedi) {
-                    $res = Invoke-DuplicatiAction -Anteprima $selezionati -Elimina $chkElimina.Checked -BaseDir $BaseDir
-                    foreach ($logLine in $res.Log) { $txtLog.AppendText("$logLine`r`n") }
-                    $txtLog.AppendText("`r`nDONE! Files processed: $($res.Gestiti)`r`n")
-                    $txtLog.SelectionStart = $txtLog.Text.Length; $txtLog.ScrollToCaret()
-                    
-                    $spazioStr = Format-Size -Bytes $res.Spazio
-                    $azioneStr = if ($chkElimina.Checked) { "permanently deleted" } else { "moved to trash" }
-                    $lblResultSummary.Text = "Operation complete!`r`n$($res.Gestiti) files $azioneStr. Space freed: $spazioStr.`r`nPath: $($res.Destinazione)"
-                }
-            } else {
-                $txtLog.AppendText("`r`nNo files selected for cleanup.`r`n")
-            }
+            # MOSTRA L'ANTEPRIMA LA PRIMA VOLTA
+            Show-PreviewAndProcess -AnteprimaEsatti $anteprimaEsatti -AnteprimaSimili $anteprimaSimili
         }
     })
 
@@ -218,6 +243,11 @@ function Show-MainWindow {
         if ($chkFoto.Checked)  { $estensioniScelte += ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".heic" }
         if ($chkDoc.Checked)   { $estensioniScelte += ".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx" }
         if ($estensioniScelte.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Select at least one file category!", "Warning", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning); return }
+        
+        # NUOVA SCANSIONE: CANCELLA I RISULTATI VECCHI E DISABILITA IL PULSANTE
+        $script:lastAnteprimaEsatti = $null
+        $script:lastAnteprimaSimili = $null
+        $btnReopenPreview.Enabled = $false
         
         $btnAvvia.Enabled = $false; $btnAnnulla.Enabled = $true; $btnAggiungi.Enabled = $false; $btnRimuovi.Enabled = $false
         $chkAudio.Enabled = $false; $chkVideo.Enabled = $false; $chkFoto.Enabled = $false; $chkDoc.Enabled = $false
