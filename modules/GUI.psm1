@@ -1,16 +1,19 @@
 ﻿<#
 .SYNOPSIS
     Interfaccia Grafica per Cerca Doppioni PRO.
-.DESCRIPTION
-    Modulo che gestisce la UI, le colonne, i colori, le date e la protezione dei clic.
 .NOTES
-    Autore: Luca Negri
-    Versione: 7.7
-    Progetto: Cerca Doppioni PRO
+    Versione: 8.8 (Fix timer infinito)
 #>
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+
+function Format-Size {
+    param([long]$Bytes)
+    if ($Bytes -ge 1GB) { return "{0:N2} GB" -f ($Bytes / 1GB) }
+    elseif ($Bytes -ge 1MB) { return "{0:N2} MB" -f ($Bytes / 1MB) }
+    else { return "{0:N2} KB" -f ($Bytes / 1KB) }
+}
 
 function Show-MainWindow {
     param([string]$BaseDir)
@@ -18,8 +21,8 @@ function Show-MainWindow {
     Import-Module "$BaseDir\Modules\Engine.psm1" -Force -DisableNameChecking
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Cerca Doppioni PRO v7.7 (Originale in cima)"
-    $form.Size = New-Object System.Drawing.Size(700, 700)
+    $form.Text = "Cerca Doppioni PRO v8.8"
+    $form.Size = New-Object System.Drawing.Size(700, 740) 
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
@@ -38,16 +41,19 @@ function Show-MainWindow {
 
     $btnAggiungi = New-Object System.Windows.Forms.Button
     $btnAggiungi.Text = "+ Aggiungi"; $btnAggiungi.Location = New-Object System.Drawing.Point(560, 40); $btnAggiungi.Size = New-Object System.Drawing.Size(100, 30)
+    $btnAggiungi.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAggiungi)
 
     $btnRimuovi = New-Object System.Windows.Forms.Button
     $btnRimuovi.Text = "- Rimuovi"; $btnRimuovi.Location = New-Object System.Drawing.Point(560, 75); $btnRimuovi.Size = New-Object System.Drawing.Size(100, 30)
+    $btnRimuovi.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnRimuovi)
 
     $chkElimina = New-Object System.Windows.Forms.CheckBox
     $chkElimina.Text = "Elimina definitivamente (altrimenti sposta nel cestino)"
     $chkElimina.Location = New-Object System.Drawing.Point(20, 145)
     $chkElimina.AutoSize = $true
+    $chkElimina.UseVisualStyleBackColor = $true
     $form.Controls.Add($chkElimina)
 
     $btnAvvia = New-Object System.Windows.Forms.Button
@@ -56,10 +62,12 @@ function Show-MainWindow {
     $btnAvvia.Size = New-Object System.Drawing.Size(640, 40)
     $btnAvvia.BackColor = [System.Drawing.Color]::LightBlue
     $btnAvvia.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $btnAvvia.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAvvia)
 
     $btnAnnulla = New-Object System.Windows.Forms.Button
     $btnAnnulla.Text = "ANNULLA"; $btnAnnulla.Location = New-Object System.Drawing.Point(20, 225); $btnAnnulla.Size = New-Object System.Drawing.Size(100, 30); $btnAnnulla.Enabled = $false
+    $btnAnnulla.UseVisualStyleBackColor = $true
     $form.Controls.Add($btnAnnulla)
 
     $lblCounter = New-Object System.Windows.Forms.Label
@@ -71,14 +79,22 @@ function Show-MainWindow {
     $form.Controls.Add($pb)
 
     $txtLog = New-Object System.Windows.Forms.TextBox
-    $txtLog.Location = New-Object System.Drawing.Point(20, 270); $txtLog.Size = New-Object System.Drawing.Size(640, 380)
+    $txtLog.Location = New-Object System.Drawing.Point(20, 265); $txtLog.Size = New-Object System.Drawing.Size(640, 360)
     $txtLog.Multiline = $true; $txtLog.ScrollBars = "Vertical"; $txtLog.ReadOnly = $true
     $txtLog.Font = New-Object System.Drawing.Font("Consolas", 9)
     $form.Controls.Add($txtLog)
 
+    $lblResultSummary = New-Object System.Windows.Forms.Label
+    $lblResultSummary.Text = ""
+    $lblResultSummary.Location = New-Object System.Drawing.Point(20, 635); $lblResultSummary.Size = New-Object System.Drawing.Size(640, 50)
+    $lblResultSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $lblResultSummary.ForeColor = [System.Drawing.Color]::DarkGreen
+    $lblResultSummary.TextAlign = "MiddleCenter"
+    $form.Controls.Add($lblResultSummary)
+
     $SyncHash = [hashtable]::Synchronized(@{})
     $SyncHash.LogQueue = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
-    $SyncHash.IsWorking = $false; $SyncHash.Cancelled = $false; $SyncHash.Progress = 0; $SyncHash.Total = 0; $SyncHash.ScannedCount = 0; $SyncHash.Result = $null
+    $SyncHash.IsWorking = $false; $SyncHash.Cancelled = $false; $SyncHash.Progress = 0; $SyncHash.Total = 0; $SyncHash.ScannedCount = 0; $SyncHash.Result = $null; $SyncHash.HasFinished = $false
 
     $btnAggiungi.Add_Click({
         $fb = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -104,16 +120,33 @@ function Show-MainWindow {
             $lblCounter.Text = "Hash: $($SyncHash.Progress) di $($SyncHash.Total)"
         }
 
-        if (-not $SyncHash.IsWorking -and $null -ne $SyncHash.Result) {
+        # FIX: Ora ascoltiamo HasFinished invece di Total
+        if ($SyncHash.HasFinished -eq $true) {
             $timer.Stop()
-            $btnAvvia.Enabled = $true; $btnAnnulla.Enabled = $false; $btnAggiungi.Enabled = $true; $btnRimuovi.Enabled = $true
-            $lblCounter.Text = "Completato!"; $pb.Value = $pb.Maximum
+            $SyncHash.HasFinished = $false # Resetta per la prossima volta
             
+            $btnAvvia.Enabled = $true; $btnAnnulla.Enabled = $false; $btnAggiungi.Enabled = $true; $btnRimuovi.Enabled = $true
+            $lblCounter.Text = "Completato!"; $pb.Style = "Blocks"; $pb.Value = 0
+            $lblResultSummary.Text = "" 
+            
+            if ($SyncHash.Cancelled) {
+                $txtLog.AppendText("`r`nOperazione annullata dall'utente.`r`n")
+                return
+            }
+
+            if ($null -eq $SyncHash.Result) {
+                [System.Windows.Forms.MessageBox]::Show("L'analisi è stata interrotta da un errore critico (es. disco rimosso). Controlla il log.", "Errore", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                return
+            }
+
             $esatti = $SyncHash.Result.Esatti
             $simili = $SyncHash.Result.Simili
             $SyncHash.Result = $null
             
-            if ($esatti.Count -eq 0 -and $simili.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Nessun duplicato!"); return }
+            if ($esatti.Count -eq 0 -and $simili.Count -eq 0) { 
+                [System.Windows.Forms.MessageBox]::Show("Nessun duplicato trovato!") 
+                return 
+            }
             
             $anteprimaEsatti = @()
             $anteprimaSimili = @()
@@ -130,7 +163,7 @@ function Show-MainWindow {
                     $anteprimaEsatti += [PSCustomObject]@{
                         Gruppo = $groupIndex
                         Azione = if ($isOriginal) { "TENERE (Originale)" } else { "ELIMINARE (Copia)" }
-                        Nome = $file.Name; Dimensione = "{0:N2} MB" -f ($file.Length / 1MB)
+                        Nome = $file.Name; Dimensione = Format-Size -Bytes $file.Length
                         Modifica = if ($isOriginal) { "$dataMod ★" } else { $dataMod }
                         Creazione = if ($isOriginal) { "$dataCre ★" } else { $dataCre }
                         Percorso = $file.FullName; OggettoOriginale = $file
@@ -152,7 +185,7 @@ function Show-MainWindow {
                     $diffPerc = 0
                     if (-not $isBest) { $diffPerc = [math]::Round(($file.Length - $sizeMax) / $sizeMax * 100) }
                     
-                    $dimensioneStr = "{0:N2} MB" -f ($file.Length / 1MB)
+                    $dimensioneStr = Format-Size -Bytes $file.Length
                     if (-not $isBest) { $dimensioneStr += " ($diffPerc%)" }
                     
                     $anteprimaSimili += [PSCustomObject]@{
@@ -170,7 +203,7 @@ function Show-MainWindow {
             
             $formAnt = New-Object System.Windows.Forms.Form
             $formAnt.Text = "Anteprima: Seleziona cosa vuoi eliminare"
-            $formAnt.Size = New-Object System.Drawing.Size(1350, 700)
+            $formAnt.Size = New-Object System.Drawing.Size(1350, 750) 
             $formAnt.StartPosition = "CenterParent"
             
             $lblInfo = New-Object System.Windows.Forms.Label
@@ -179,41 +212,58 @@ function Show-MainWindow {
             $formAnt.Controls.Add($lblInfo)
 
             $btnSelAll = New-Object System.Windows.Forms.Button
-            $btnSelAll.Text = "Seleziona Tutti"; $btnSelAll.Location = New-Object System.Drawing.Point(10, 30); $btnSelAll.Size = New-Object System.Drawing.Size(120, 25)
+            $btnSelAll.Text = "Seleziona Tutti"; $btnSelAll.Location = New-Object System.Drawing.Point(10, 30); $btnSelAll.Size = New-Object System.Drawing.Size(120, 30)
+            $btnSelAll.UseVisualStyleBackColor = $true
             $formAnt.Controls.Add($btnSelAll)
 
             $btnDeselAll = New-Object System.Windows.Forms.Button
-            $btnDeselAll.Text = "Deseleziona Tutti"; $btnDeselAll.Location = New-Object System.Drawing.Point(140, 30); $btnDeselAll.Size = New-Object System.Drawing.Size(120, 25)
+            $btnDeselAll.Text = "Deseleziona Tutti"; $btnDeselAll.Location = New-Object System.Drawing.Point(140, 30); $btnDeselAll.Size = New-Object System.Drawing.Size(120, 30)
+            $btnDeselAll.UseVisualStyleBackColor = $true
             $formAnt.Controls.Add($btnDeselAll)
 
             $chkShowSimilar = New-Object System.Windows.Forms.CheckBox
             $chkShowSimilar.Text = "Mostra file simili (stesso nome, dimensioni diverse)"
-            $chkShowSimilar.Location = New-Object System.Drawing.Point(280, 32)
-            $chkShowSimilar.AutoSize = $true
+            $chkShowSimilar.Location = New-Object System.Drawing.Point(280, 35)
+            $chkShowSimilar.Size = New-Object System.Drawing.Size(350, 20)
             $chkShowSimilar.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
             $chkShowSimilar.Checked = $false
+            $chkShowSimilar.UseVisualStyleBackColor = $true
             $formAnt.Controls.Add($chkShowSimilar)
 
-            # NUOVA OPZIONE GRASSETTO
             $chkBoldOriginal = New-Object System.Windows.Forms.CheckBox
             $chkBoldOriginal.Text = "Grassetto sugli originali"
-            $chkBoldOriginal.Location = New-Object System.Drawing.Point(600, 32)
-            $chkBoldOriginal.AutoSize = $true
+            $chkBoldOriginal.Location = New-Object System.Drawing.Point(650, 35)
+            $chkBoldOriginal.Size = New-Object System.Drawing.Size(200, 20)
             $chkBoldOriginal.Checked = $true
+            $chkBoldOriginal.UseVisualStyleBackColor = $true
             $formAnt.Controls.Add($chkBoldOriginal)
 
             $lblSummary = New-Object System.Windows.Forms.Label
             $lblSummary.Text = "Calcolo riepilogo..."
-            $lblSummary.Location = New-Object System.Drawing.Point(780, 35)
-            $lblSummary.Size = New-Object System.Drawing.Size(540, 20)
+            $lblSummary.Location = New-Object System.Drawing.Point(860, 35)
+            $lblSummary.Size = New-Object System.Drawing.Size(460, 20)
             $lblSummary.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
             $lblSummary.ForeColor = [System.Drawing.Color]::DarkSlateGray
             $lblSummary.TextAlign = "MiddleRight"
             $formAnt.Controls.Add($lblSummary)
 
+            $lblSearch = New-Object System.Windows.Forms.Label
+            $lblSearch.Text = "Cerca per nome:"
+            $lblSearch.Location = New-Object System.Drawing.Point(10, 70); $lblSearch.AutoSize = $true
+            $formAnt.Controls.Add($lblSearch)
+
+            $txtSearch = New-Object System.Windows.Forms.TextBox
+            $txtSearch.Location = New-Object System.Drawing.Point(110, 68)
+            $txtSearch.Size = New-Object System.Drawing.Size(250, 20)
+            $formAnt.Controls.Add($txtSearch)
+
+            $chkShowSimilar.BringToFront()
+            $chkBoldOriginal.BringToFront()
+            $lblSummary.BringToFront()
+
             $listView = New-Object System.Windows.Forms.ListView
-            $listView.Location = New-Object System.Drawing.Point(10, 65)
-            $listView.Size = New-Object System.Drawing.Size(1310, 500)
+            $listView.Location = New-Object System.Drawing.Point(10, 100)
+            $listView.Size = New-Object System.Drawing.Size(1310, 470)
             $listView.View = "Details"; $listView.CheckBoxes = $true; $listView.FullRowSelect = $true; $listView.GridLines = $true; $listView.HideSelection = $false
             
             $imgList = New-Object System.Windows.Forms.ImageList
@@ -233,6 +283,7 @@ function Show-MainWindow {
             
             $script:lastClickX = 0
             $script:lastClickY = 0
+            $script:searchText = ""
 
             $updateSummary = {
                 $selezionati = @($listView.Items | Where-Object { $_.Checked })
@@ -255,7 +306,10 @@ function Show-MainWindow {
                 $itemsToShow += $anteprimaEsatti
                 if ($chkShowSimilar.Checked) { $itemsToShow += $anteprimaSimili }
 
-                # ORDINAMENTO: Prima per Gruppo, poi mettiamo l'Originale (True) prima della Copia (False)
+                if ($script:searchText -ne "") {
+                    $itemsToShow = $itemsToShow | Where-Object { $_.Nome -like "*$($script:searchText)*" -or $_.Percorso -like "*$($script:searchText)*" }
+                }
+
                 $itemsToShow = $itemsToShow | Sort-Object -Property @{Expression="Gruppo";Descending=$false}, @{Expression="IsOriginal";Descending=$true}
 
                 foreach ($item in $itemsToShow) {
@@ -279,7 +333,6 @@ function Show-MainWindow {
                     $lvItem.SubItems.Add($item.Creazione) | Out-Null
                     $lvItem.SubItems.Add($item.Percorso) | Out-Null
                     
-                    # COLORE E GRASSETTO
                     if ($item.IsOriginal) { 
                         $lvItem.ForeColor = [System.Drawing.Color]::Green 
                         if ($chkBoldOriginal.Checked) {
@@ -308,17 +361,8 @@ function Show-MainWindow {
                 param($sender, $e)
                 if ($e.Index -ge 0) {
                     $item = $sender.Items[$e.Index]
-                    
-                    if ($item.Tag.IsOriginal) { 
-                        $e.NewValue = [System.Windows.Forms.CheckState]::Unchecked 
-                        return
-                    }
-                    
-                    if ($script:lastClickX -gt 70) {
-                        $e.NewValue = $e.CurrentValue 
-                        return
-                    }
-                    
+                    if ($item.Tag.IsOriginal) { $e.NewValue = [System.Windows.Forms.CheckState]::Unchecked; return }
+                    if ($script:lastClickX -gt 70) { $e.NewValue = $e.CurrentValue; return }
                     $formAnt.BeginInvoke([Action]{ & $updateSummary })
                 }
             })
@@ -334,34 +378,47 @@ function Show-MainWindow {
             $menuOpenFolder = $contextMenu.Items.Add("📁 Apri Cartella")
             $menuCopyPath = $contextMenu.Items.Add("📋 Copia Percorso")
             $listView.ContextMenuStrip = $contextMenu
-
             $menuOpenFile.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Start-Process $listView.SelectedItems[0].Tag.Percorso } })
             $menuOpenFolder.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Start-Process explorer.exe -ArgumentList "/select,`"$($listView.SelectedItems[0].Tag.Percorso)`"" } })
             $menuCopyPath.Add_Click({ if ($listView.SelectedItems.Count -gt 0) { Set-Clipboard -Value $listView.SelectedItems[0].Tag.Percorso } })
 
             $btnSelAll.Add_Click({ foreach ($lvItem in $listView.Items) { if (-not $lvItem.Tag.IsOriginal) { $lvItem.Checked = $true } }; & $updateSummary })
             $btnDeselAll.Add_Click({ foreach ($lvItem in $listView.Items) { $lvItem.Checked = $false }; & $updateSummary })
-            
-            # EVENTI PER LE CHECKBOX
             $chkShowSimilar.Add_CheckedChanged({ & $populateList })
             $chkBoldOriginal.Add_CheckedChanged({ & $populateList })
+            
+            $txtSearch.Add_TextChanged({
+                $script:searchText = $txtSearch.Text
+                & $populateList
+            })
 
             $formAnt.Controls.Add($listView)
             
             $btnProcedi = New-Object System.Windows.Forms.Button
-            $btnProcedi.Text = "PROCEDI CON LE SELEZIONATI"; $btnProcedi.Location = New-Object System.Drawing.Point(10, 575); $btnProcedi.Size = New-Object System.Drawing.Size(500, 40); $btnProcedi.BackColor = [System.Drawing.Color]::LightGreen
+            $btnProcedi.Text = "PROCEDI CON LE SELEZIONATI"; $btnProcedi.Location = New-Object System.Drawing.Point(10, 580); $btnProcedi.Size = New-Object System.Drawing.Size(500, 40); $btnProcedi.BackColor = [System.Drawing.Color]::LightGreen
             $btnProcedi.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+            $btnProcedi.UseVisualStyleBackColor = $true
             $formAnt.Controls.Add($btnProcedi)
+            
             $btnAnnAnt = New-Object System.Windows.Forms.Button
-            $btnAnnAnt.Text = "ANNULLA"; $btnAnnAnt.Location = New-Object System.Drawing.Point(550, 575); $btnAnnAnt.Size = New-Object System.Drawing.Size(770, 40); $btnAnnAnt.BackColor = [System.Drawing.Color]::LightCoral
+            $btnAnnAnt.Text = "ANNULLA"; $btnAnnAnt.Location = New-Object System.Drawing.Point(550, 580); $btnAnnAnt.Size = New-Object System.Drawing.Size(770, 40); $btnAnnAnt.BackColor = [System.Drawing.Color]::LightCoral
+            $btnAnnAnt.UseVisualStyleBackColor = $true
             $formAnt.Controls.Add($btnAnnAnt)
             
             & $populateList
 
             $script:selezionati = @()
             $btnAnnAnt.Add_Click({ $formAnt.Close() })
+            
             $btnProcedi.Add_Click({
                 $script:selezionati = @($listView.Items | Where-Object { $_.Checked } | ForEach-Object { $_.Tag })
+                
+                if ($chkElimina.Checked -and $script:selezionati.Count -gt 0) {
+                    $msg = "Stai per ELIMINARE DEFINITIVAMENTE $($script:selezionati.Count) file.`n`nQuesta azione è IRREVERSIBILE e i file non finiranno nel cestino.`n`nSei sicuro di voler procedere?"
+                    $res = [System.Windows.Forms.MessageBox]::Show($msg, "Conferma Eliminazione", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                    if ($res -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+                }
+                
                 $formAnt.Close()
             })
             
@@ -373,6 +430,11 @@ function Show-MainWindow {
                 foreach ($logLine in $res.Log) { $txtLog.AppendText("$logLine`r`n") }
                 $txtLog.AppendText("`r`nFINITO! File gestiti: $($res.Gestiti)`r`n")
                 $txtLog.SelectionStart = $txtLog.Text.Length; $txtLog.ScrollToCaret()
+                
+                $spazioStr = Format-Size -Bytes $res.Spazio
+                $azioneStr = if ($chkElimina.Checked) { "eliminati definitivamente" } else { "spostati nel cestino" }
+                
+                $lblResultSummary.Text = "Operazione completata!`r`n$($res.Gestiti) file $azioneStr. Spazio recuperato: $spazioStr.`r`nPercorso: $($res.Destinazione)"
             } else {
                 $txtLog.AppendText("`r`nNessun file selezionato per la pulizia.`r`n")
             }
@@ -381,12 +443,21 @@ function Show-MainWindow {
 
     $btnAvvia.Add_Click({
         [string[]]$cartelle = @()
-        foreach ($item in $listBox.Items) { if ($item) { $cartelle += $item.ToString() } }
-        if ($cartelle.Count -eq 0) { [System.Windows.Forms.MessageBox]::Show("Aggiungi almeno una cartella!"); return }
+        foreach ($item in $listBox.Items) { 
+            if ($item -and -not [string]::IsNullOrWhiteSpace($item.ToString())) { 
+                $cartelle += $item.ToString() 
+            } 
+        }
+        
+        if ($cartelle.Count -eq 0) { 
+            [System.Windows.Forms.MessageBox]::Show("Per favore, aggiungi almeno una cartella prima di analizzare!", "Attenzione", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+            return 
+        }
         
         $btnAvvia.Enabled = $false; $btnAnnulla.Enabled = $true; $btnAggiungi.Enabled = $false; $btnRimuovi.Enabled = $false
         $txtLog.Clear(); $SyncHash.Total = 0; $SyncHash.Progress = 0; $SyncHash.ScannedCount = 0
-        $SyncHash.Cancelled = $false; $SyncHash.IsWorking = $true; $SyncHash.Result = $null
+        $SyncHash.Cancelled = $false; $SyncHash.IsWorking = $true; $SyncHash.Result = $null; $SyncHash.HasFinished = $false
+        $lblResultSummary.Text = "" 
         $pb.Style = "Marquee"; $pb.MarqueeAnimationSpeed = 30; $timer.Start()
         
         $PowerShell = [powershell]::Create()
