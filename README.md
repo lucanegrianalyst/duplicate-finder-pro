@@ -1,5 +1,8 @@
 # 🎵 Duplicate Finder PRO
 
+[![Download](https://img.shields.io/badge/Download-Latest%20Release-brightgreen?style=for-the-badge&logo=github)](https://github.com/lucanegrianalyst/duplicate-finder-pro/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
 A powerful GUI tool to find and manage duplicate files on Windows, optimized for music libraries, photo folders, and videos, even across multiple drives.
 
 ![Version](https://img.shields.io/badge/version-11.25-blue.svg)
